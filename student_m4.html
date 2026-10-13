@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplicatii MRU - Modul 4</title>
+<style>
+:root{--bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#ddd9d0;--navy:#1a3a5c;--navy2:#264d75;--gold:#b8892a;--goldl:#e8c87a;--text:#1c1c1c;--muted:#6b6560;--light:#9a948e;--green:#2d6a4f;--greenbg:#eaf4ef;--red:#8b2635;--redbg:#fdf0f0;--purple:#4a2d7a;--purplebg:#f0ecf8;--r:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.65;min-height:100vh}
+.overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center}
+#loadingScreen{background:var(--navy);flex-direction:column;color:#fff}
+#loadingScreen h2{font-size:22px;font-weight:700;margin-bottom:8px}
+#loadingScreen p{font-size:13px;opacity:.7}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#identifyScreen{background:rgba(0,0,0,.7);display:none}
+#identifyScreen.show{display:flex}
+.id-box{background:#fff;border-radius:12px;padding:36px 40px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.id-box h2{font-size:20px;color:var(--navy);margin-bottom:6px;font-weight:700}
+.id-box p{font-size:13px;color:var(--muted);margin-bottom:24px}
+.id-label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.id-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;margin-bottom:16px;background:var(--bg);font-family:inherit}
+.id-input:focus{outline:none;border-color:var(--navy);background:#fff}
+.id-btn{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.id-btn:hover{background:var(--navy2)}
+.id-err{font-size:12px;color:var(--red);margin-top:8px;display:none}
+header{background:var(--navy);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.hbadge{background:var(--gold);font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 7px;border-radius:3px;flex-shrink:0}
+.htitle{font-size:13px;opacity:.9;margin-left:14px}
+.huser{font-size:12px;opacity:.8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hprog{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);padding:5px 12px;border-radius:20px;font-size:12px;white-space:nowrap}
+.pbmini{width:60px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
+.pbfill{height:100%;background:var(--goldl);border-radius:2px;transition:width .4s}
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 56px)}
+nav{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.nlabel{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--light);padding:0 20px 8px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;border-left:3px solid transparent;font-size:13.5px;color:var(--muted);transition:all .15s}
+.ni:hover{background:var(--surface2);color:var(--text)}
+.ni.active{border-left-color:var(--navy);background:#eef3f8;color:var(--navy);font-weight:600}
+.ni.done{color:var(--green)}
+.ni .nscore{margin-left:auto;font-size:11px;background:var(--greenbg);color:var(--green);padding:2px 7px;border-radius:10px;font-weight:700}
+.nicon{font-size:15px;min-width:20px;text-align:center}
+.ndiv{margin:16px 20px;border:none;border-top:1px solid var(--border)}
+main{padding:36px 48px;max-width:860px}
+.section{display:none}
+.section.visible{display:block;animation:fi .25s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.shead{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sicon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.ib{background:#e8f0f8}.ia{background:#fdf4e3}.ig{background:#e8f4ef}.ip{background:#f0ecf8}.ir{background:#fce8ec}
+.sheading{font-size:18px;font-weight:700;color:var(--navy)}
+.sdesc{font-size:13px;color:var(--muted);margin-top:2px}
+.icard{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:10px;padding:28px 32px;margin-bottom:24px}
+.icard h2{font-size:22px;font-weight:700;margin-bottom:10px;line-height:1.3}
+.icard p{font-size:14px;opacity:.85;max-width:560px;line-height:1.7}
+.otags{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+.otag{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500}
+.thbox{border-radius:var(--r);padding:20px 24px;margin-bottom:20px;border:1px solid var(--border)}
+.th-navy{background:#eef3f8;border-left:5px solid var(--navy)}
+.th-gold{background:#fdf7ec;border-left:5px solid var(--gold)}
+.th-green{background:var(--greenbg);border-left:5px solid var(--green)}
+.th-purple{background:var(--purplebg);border-left:5px solid var(--purple)}
+.th-red{background:var(--redbg);border-left:5px solid var(--red)}
+.thtag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;opacity:.7}
+.thbox h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.thbox p{font-size:13.5px;line-height:1.75;margin-bottom:8px}
+.thbox p:last-child{margin-bottom:0}
+.thbox ul{padding-left:20px;font-size:13.5px;line-height:1.75}
+.thbox ul li{margin-bottom:6px}
+.thbox strong{font-weight:700}
+.th2col{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin:12px 0}
+.th2col-hd{padding:10px 16px;font-size:12px;font-weight:700;color:#fff;text-align:center}
+.th2col-bd{padding:10px 14px;font-size:13px;line-height:1.6;border-right:1px solid var(--border);border-top:1px solid var(--border)}
+.th2col-bd:nth-child(2n){border-right:none}
+.th2col-bd ul{padding-left:16px}
+.th2col-bd ul li{margin-bottom:4px}
+.scen-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.scen-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);margin-bottom:8px}
+.scen-q{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px;line-height:1.5}
+.scen-ctx{font-size:13px;color:var(--muted);margin-bottom:18px;font-style:italic}
+.scen-opts{display:flex;flex-direction:column;gap:9px}
+.sopt{display:flex;align-items:flex-start;gap:11px;padding:12px 16px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;background:var(--bg);text-align:left;font-size:13.5px;font-family:inherit;line-height:1.5;width:100%;transition:all .15s}
+.sopt:hover{border-color:var(--navy);background:#eef3f8}
+.sopt.correct{border-color:var(--green);background:var(--greenbg);color:var(--green)}
+.sopt.wrong{border-color:var(--red);background:var(--redbg);color:var(--red)}
+.sopt-letter{min-width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-top:1px}
+.scen-fb{margin-top:14px;padding:14px 16px;border-radius:var(--r);font-size:13.5px;line-height:1.65;display:none}
+.scen-fb.show{display:block}
+.fb-correct{background:var(--greenbg);color:var(--green);border-left:4px solid var(--green)}
+.fb-wrong{background:var(--redbg);color:var(--red);border-left:4px solid var(--red)}
+.prog-dots{display:flex;gap:5px;margin-bottom:18px}
+.pdot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:background .2s}
+.pdot.c{background:var(--green)}.pdot.w{background:var(--red)}.pdot.cur{background:var(--navy)}
+.scorebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 24px;margin-top:20px;display:flex;align-items:center;gap:20px}
+.scirc{width:60px;height:60px;border-radius:50%;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.snum{font-size:20px;font-weight:700}.sden{font-size:10px;opacity:.7}
+.snav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.btnpri{padding:10px 22px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s}
+.btnpri:hover{background:var(--navy2)}
+.btnsec{padding:10px 18px;border:1px solid var(--border);background:#fff;border-radius:var(--r);font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s}
+.btnsec:hover{border-color:var(--navy);color:var(--navy)}
+.subzone{background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;margin-top:24px}
+.subzone.done{border-color:var(--green);background:var(--greenbg)}
+.subzone h3{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:8px}
+.subzone p{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+.subbtn{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:13px 32px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s}
+.subbtn:hover{background:#235a40}
+.subbtn:disabled{opacity:.5;cursor:default}
+.score-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.ss-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center}
+.ss-num{font-size:22px;font-weight:700;color:var(--navy)}
+.ss-label{font-size:11px;color:var(--muted);margin-top:3px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-bottom:16px}
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  nav{position:static;height:auto;display:flex;gap:4px;padding:12px;overflow-x:auto;flex-direction:row;border-right:none;border-bottom:1px solid var(--border)}
+  .nlabel,.ndiv{display:none}
+  .ni{padding:7px 12px;border-left:none;border-bottom:2px solid transparent;white-space:nowrap;border-radius:4px}
+  .ni.active{border-bottom-color:var(--navy);background:#eef3f8}
+  .ni .nscore{display:none}
+  main{padding:20px 16px}
+  .th2col{grid-template-columns:1fr}
+  .score-summary{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="overlay" style="display:flex;flex-direction:column">
+  <div class="spinner"></div>
+  <h2>Aplicatii MRU</h2>
+  <p>Se pregatesc scenariile tale...</p>
+</div>
+
+<div id="identifyScreen" class="overlay">
+  <div class="id-box">
+    <div id="idStep1">
+      <h2>Acces Modul 4</h2>
+      <p>Introdu codul de acces primit de la profesor.</p>
+      <label class="id-label">Cod de acces</label>
+      <input type="password" id="inputCod" class="id-input" placeholder="Cod de acces">
+      <button class="id-btn" onclick="checkCod()">Continua &rarr;</button>
+      <div class="id-err" id="idErrCod">Cod incorect.</div>
+    </div>
+    <div id="idStep2" style="display:none">
+      <h2 id="idStep2Title">Identificare student</h2>
+      <p id="idStep2Desc">Completeaza datele. Vei primi un set unic de scenarii.</p>
+      <label class="id-label">Nume si prenume</label>
+      <input type="text" id="inputNume" class="id-input" placeholder="ex: Ionescu Alexandru">
+      <label class="id-label">Grupa</label>
+      <input type="text" id="inputGrupa" class="id-input" placeholder="ex: 571, 581">
+      <button class="id-btn" onclick="submitIdentity()">Genereaza setul meu &rarr;</button>
+      <div class="id-err" id="idErr">Te rog completeaza toate campurile.</div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div style="display:flex;align-items:center;overflow:hidden">
+    <span class="hbadge">AN</span>
+    <span class="htitle">MRU &middot; Modulul 4 &middot; Evaluarea Performantelor Personalului</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="huser" id="hUser"></span>
+    <div class="hprog"><span id="progTxt">0 / 4</span><div class="pbmini"><div class="pbfill" id="pbfill" style="width:0%"></div></div></div>
+  </div>
+</header>
+
+<div class="layout">
+<nav>
+  <div class="nlabel">Activitati</div>
+  <div class="ni active" onclick="show('intro')" id="nav-intro"><span class="nicon">📋</span> Introducere</div>
+  <div class="ni" onclick="show('concepte')" id="nav-concepte"><span class="nicon">📊</span> Concepte si obiective</div>
+  <div class="ni" onclick="show('metode')" id="nav-metode"><span class="nicon">🔧</span> Metode de evaluare</div>
+  <div class="ni" onclick="show('erori')" id="nav-erori"><span class="nicon">⚠️</span> Erori in evaluare</div>
+  <div class="ni" onclick="show('quiz')" id="nav-quiz"><span class="nicon">🧠</span> Autoevaluare</div>
+  <hr class="ndiv">
+  <div class="ni" onclick="show('predare')" id="nav-predare"><span class="nicon">📤</span> Trimite raspunsurile</div>
+</nav>
+
+<main>
+
+<!-- INTRO -->
+<div class="section visible" id="section-intro">
+  <div class="icard">
+    <h2>Evaluarea Performantelor Personalului</h2>
+    <p>Modulul acopera Capitolul 5: definitia si particularitatile evaluarii, obiectivele, tipurile de evaluare, etapele procesului, cine evalueaza, metodele si tehnicile de evaluare si sursele de erori.</p>
+    <div class="otags"><span class="otag">Concepte si obiective</span><span class="otag">Metode de evaluare</span><span class="otag">Surse de erori</span><span class="otag">Tipuri de evaluatori</span></div>
+  </div>
+  <div class="pcard">
+    <div style="font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Structura aplicatiei</div>
+    <div style="font-size:14px;line-height:1.8">
+      <p style="margin-bottom:8px">&#9312; <strong>Concepte si obiective</strong> &mdash; 6 scenarii despre definitia performantei, cei 3 pasi ai evaluarii, particularitatile si obiectivele activitatii.</p>
+      <p style="margin-bottom:8px">&#9313; <strong>Metode de evaluare</strong> &mdash; 6 scenarii despre metodele si tehnicile de evaluare a performantelor si cine evalueaza.</p>
+      <p style="margin-bottom:8px">&#9314; <strong>Erori in evaluare</strong> &mdash; 4 scenarii despre sursele de erori si cum pot fi evitate.</p>
+      <p>&#9315; <strong>Test de autoevaluare</strong> &mdash; 8 intrebari din materia capitolului.</p>
+    </div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="show('concepte')">Incepe &rarr;</button></div>
+</div>
+
+<!-- CONCEPTE -->
+<div class="section" id="section-concepte">
+  <div class="shead"><div class="sicon ib">📊</div><div><div class="sheading">Concepte si obiective</div><div class="sdesc">Definitie, particularitati, tipuri si obiective ale evaluarii</div></div></div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Definitia performantei si evaluarii</div>
+    <h3>Ce este performanta si cum se evalueaza</h3>
+    <p><strong>Performanta</strong> = gradul de indeplinire a sarcinilor pe care trebuie sa le realizeze un angajat la nivelul postului sau. Este totodata contributia fiecarui angajat la indeplinirea obiectivelor organizatiei.</p>
+    <p><strong>Performanta = comportamente + rezultate</strong> (Brumbach, 1988) — comportamentele sunt analizate prin prisma rezultatelor obtinute.</p>
+    <p><strong>Evaluarea performantelor</strong> = activitatea de baza a MRU desfasurata in vederea determinarii gradului in care angajatii indeplinesc sarcinile sau responsabilitatile ce le revin (Manolescu, 2007).</p>
+    <p style="margin-top:10px"><strong>Cei 3 pasi ai evaluarii:</strong></p>
+    <ul>
+      <li><strong>Masurarea</strong> — atasarea de determinanti cantitativi (cifre) unui comportament, produs, activitate sau persoana</li>
+      <li><strong>Aprecierea</strong> — stabilirea de calificative calitative (foarte bun, bun, mediu, satisfacator) prin comparatie cu un standard sau baza de referinta</li>
+      <li><strong>Decizia</strong> — includerea aprecierii intr-un sistem de notare sau ierarhizare care evidentiaza performanta angajatului</li>
+    </ul>
+  </div>
+
+  <div class="thbox th-gold">
+    <div class="thtag">7 particularitati ale evaluarii performantelor</div>
+    <h3>Ce face evaluarea o activitate complexa si specifica</h3>
+    <ul>
+      <li><strong>1. Operatiune periodica scrisa</strong> — are o metodologie si structura stabilite, cu rezultate consemnate in scris</li>
+      <li><strong>2. Bilant al muncii depuse</strong> — reda intr-o forma sintetica rezultatele activitatii unui angajat</li>
+      <li><strong>3. Presupune discutii personale</strong> — interviul de evaluare in care evaluatorul comunica rezultatele si identifica cauzele disfunctionalitatilor</li>
+      <li><strong>4. Proces sistematic si complex</strong> — include evaluarea comportamentului, evaluarea potentialului si evaluarea performantelor propriu-zise</li>
+      <li><strong>5. Preponderent pozitiva si constructiva</strong> — orientata spre viitor, nu spre trecut; constructiva, nu distructiva</li>
+      <li><strong>6. Caracter subiectiv</strong> — realizata de oameni care interpreteaza criteriile prin propriul sistem de valori</li>
+      <li><strong>7. Componenta emotionala</strong> — rezultatele au semnificatie pentru angajat; o apreciere nefavorabila poate fi motivanta sau demotivanta</li>
+    </ul>
+  </div>
+
+  <div class="thbox th-green">
+    <div class="thtag">5 obiective ale evaluarii performantelor</div>
+    <h3>De ce se evalueaza performantele</h3>
+    <ul>
+      <li><strong>1. Recompensarea angajatilor</strong> — motivarea suplimentara sau sanctionarea in functie de rezultate; stimularea performantelor ridicate</li>
+      <li><strong>2. Furnizarea de feedback</strong> — informarea angajatilor despre rezultatele obtinute, perspectivele de viitor si masurile de imbunatatire</li>
+      <li><strong>3. Identificarea nevoilor de training</strong> — semnalarea carentelor profesionale si evaluarea eficientei programelor de formare</li>
+      <li><strong>4. Dezvoltarea planurilor de cariera</strong> — pe baza performantelor se elaboreaza planuri individuale si colective de cariera</li>
+      <li><strong>5. Validarea procesului de selectie</strong> — evaluarea posteriora confirma sau infirma calitatea procesului de selectie; un proces de selectie riguros asigura resurse umane de calitate superioara</li>
+    </ul>
+  </div>
+
+  <div class="thbox th-purple">
+    <div class="thtag">Tipuri de evaluare</div>
+    <h3>Clasificarea evaluarilor dupa 4 criterii</h3>
+    <ul>
+      <li><strong>Dupa orizontul de timp:</strong> periodice (la intervale prestabilite — anual, semestrial, trimestrial) si spontane (determinate de factori imprevizibili: comanda urgenta, decesul unui angajat cheie, crize)</li>
+      <li><strong>Dupa criterii:</strong> cantitative (cifra de afaceri, profit, numar contracte, rate absenteism) si calitative (abilitati de lider, capacitate de analiza, atitudine, comunicare)</li>
+      <li><strong>Dupa structura:</strong> sistematice (criterii prestabilite, cantitative sau calitative) si nesistematice (criterii nestabilite, axate pe personalitate si comportament)</li>
+      <li><strong>Dupa formalizare:</strong> formale (metodologie oficiala stabilita in prealabil) si informale (aprecierea facuta de sef in cursul muncii obisnuite, subiectiva)</li>
+    </ul>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--navy)">
+    <strong style="color:var(--navy)">6 scenarii</strong> despre conceptele si obiectivele evaluarii performantelor.
+  </div>
+
+  <div class="prog-dots" id="concepteDots"></div>
+  <div id="concepteQ"></div>
+  <div class="scorebar" id="concepteScore" style="display:none">
+    <div class="scirc"><div class="snum" id="concepteSnum">0</div><div class="sden">/ 6</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="concepteSlab"></div><div style="font-size:13px;color:var(--muted)" id="concepteStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('concepte');show('metode')">Continua &rarr;</button></div>
+</div>
+
+<!-- METODE -->
+<div class="section" id="section-metode">
+  <div class="shead"><div class="sicon ia">🔧</div><div><div class="sheading">Metode de evaluare</div><div class="sdesc">Tehnici, metode comparative si cine evalueaza</div></div></div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Metodele de evaluare a performantelor</div>
+    <h3>Principalele metode si tehnici</h3>
+    <ul>
+      <li><strong>Scale de evaluare</strong> — evaluarea separata pe fiecare caracteristica profesionala; tehnici: grafice, cu pasi multipli, standardizata, pe puncte, axate pe comportament, de observare a comportamentului</li>
+      <li><strong>Metode comparative</strong> — ierarhizarea angajatilor in raport cu ceilalti: compararea simpla (ordonarea rangurilor), compararea pe perechi (N(N-1)/2 perechi), distribuire fortata (curba Gauss)</li>
+      <li><strong>Tehnica incidentelor critice</strong> — inregistrarea permanenta a aspectelor exceptionale (pozitive si negative); discutia are loc imediat, nu la data evaluarii</li>
+      <li><strong>Metoda listelor de verificare</strong> — set de caracteristici comportamentale cu indicatori valorici prestabiliti</li>
+      <li><strong>Eseul scris</strong> — prezentarea in scris de catre angajat a realizarilor, neimplinirilor si disfunctionalitatilor; neformalizat, permite surprinderea aspectelor necunoscute</li>
+      <li><strong>Analiza unui domeniu de activitate</strong> — echipa HR + specialisti ai compartimentului; interviuri structurate pentru toti angajatii; laborioasa dar completa</li>
+      <li><strong>Managementul prin obiective</strong> — evaluarea in raport cu obiective prestabilite si agreate</li>
+    </ul>
+  </div>
+
+  <div class="thbox th-gold">
+    <div class="thtag">Cine evalueaza — 5 categorii de evaluatori</div>
+    <h3>Surse de evaluare a performantelor</h3>
+    <div class="th2col">
+      <div class="th2col-hd" style="background:var(--navy)">Tip evaluator</div>
+      <div class="th2col-hd" style="background:var(--navy)">Avantaje si dezavantaje principale</div>
+      <div class="th2col-bd"><strong>1. Managerii evalueaza subordonatii</strong></div>
+      <div class="th2col-bd">Cea mai frecventa; managerii sunt cei mai autorizati. Risc: ignoranta colectiva (medierea aprecierilor in grup) si subiectivism individual.</div>
+      <div class="th2col-bd"><strong>2. Subordonatii evalueaza superiorii</strong></div>
+      <div class="th2col-bd">Identifica managerii incompetenti. Risc: frica de represalii, manageri devin prea amabili pentru note bune.</div>
+      <div class="th2col-bd"><strong>3. Colegi de pe pozitii echivalente</strong></div>
+      <div class="th2col-bd">Rar utilizat in grup deschis (deterioreaza relatiile). Util in forma combinata cu aprecierile sefului.</div>
+      <div class="th2col-bd"><strong>4. Autoevaluarea</strong></div>
+      <div class="th2col-bd">Instrument de autodepasire; angajatul identifica puncte tari si slabe. Risc: foloseste alte sisteme de valori decat sefii.</div>
+      <div class="th2col-bd"><strong>5. Evaluatori externi</strong></div>
+      <div class="th2col-bd">Obiectivitate maxima prin lipsa dependentei ierarhice. Dezavantaj: nu cunosc toate elementele organizatiei; costisitori si consuma timp.</div>
+    </div>
+  </div>
+
+  <div class="thbox" style="background:#fff8e6;border-left:5px solid #e6a817;border:1px solid #f0d080">
+    <div class="thtag" style="color:#8a6000">Perspectiva contemporana (post-2020)</div>
+    <h3 style="color:#5a3e00">Evaluarea performantelor in era feedback-ului continuu</h3>
+    <p><strong>Evaluarea 360 de grade</strong> (mentionata implicit prin cele 5 categorii de evaluatori din suportul de curs) a devenit standard in organizatiile moderne: angajatul primeste feedback simultan de la manager, colegi, subordonati si autoevaluare, oferind o imagine completa si echilibrata a performantei.</p>
+    <p><strong>Feedback continuu vs. evaluarea anuala:</strong> companii ca Adobe, Microsoft si Deloitte au inlocuit evaluarile anuale cu check-in-uri regulate (saptamanale sau lunare). Argumentul: asteptarea unui an pentru a comunica un feedback critic este ineficienta si demotivanta. Aceasta se aliniaza cu particularitatea 3 din suportul de curs (discutii personale), dar la frecventa mult mai mare.</p>
+    <p><strong>Distribuirea fortata (curba Gauss) a fost abandonata</strong> de Microsoft in 2013, dupa ce s-a demonstrat ca genereaza competitie interna toxica, nu colaborare. Angajatii evitau sa lucreze cu oameni talentati de teama sa nu fie ei cei evaluati mai slab in comparatie. Aceasta ilustreaza riscul practic al metodei comparative mentionat in suportul de curs.</p>
+    <p><strong>OKR (Objectives and Key Results)</strong> este o forma moderna de management prin obiective: obiective ambitioase si masurabile, cu rezultate cheie cuantificabile, revizuite trimestrial. Transparenta totala (toata lumea vede obiectivele tuturor) reduce subiectivismul evaluarii.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--gold)">
+    <strong style="color:var(--navy)">6 scenarii</strong> despre metodele de evaluare si categoriile de evaluatori.
+  </div>
+
+  <div class="prog-dots" id="metodeDots"></div>
+  <div id="metodeQ"></div>
+  <div class="scorebar" id="metodeScore" style="display:none">
+    <div class="scirc"><div class="snum" id="metodeSnum">0</div><div class="sden">/ 6</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="metodeSlab"></div><div style="font-size:13px;color:var(--muted)" id="metodeStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('metode');show('erori')">Continua &rarr;</button></div>
+</div>
+
+<!-- ERORI -->
+<div class="section" id="section-erori">
+  <div class="shead"><div class="sicon ir">⚠️</div><div><div class="sheading">Erori in evaluarea performantelor</div><div class="sdesc">Surse de erori si efectele lor</div></div></div>
+
+  <div class="thbox th-red">
+    <div class="thtag">Principalele surse de erori (Mathis si Manolescu)</div>
+    <h3>Ce poate distorsiona rezultatele evaluarii</h3>
+    <ul>
+      <li><strong>Efectul criteriului unic</strong> — evaluarea se axeaza pe un singur criteriu, ignorand celelalte aspecte ale muncii</li>
+      <li><strong>Efectul de aura / halou</strong> — evaluatorul este orbit de un singur criteriu (pozitiv sau negativ), celelalte criterii fiind minimalizate sau evaluate automat in acelasi sens</li>
+      <li><strong>Eroarea evaluarii logice</strong> — aplicatie a efectului de halou; calificativele se acorda pe baza unor considerente logice, matematice, ignorand aspectele psihologice si contextuale</li>
+      <li><strong>Standarde de performanta neclare</strong> — indicatorii de calitate greu de definit sau formulati ambiguu (activitate buna, rezultat superior) fac evaluarea irelevanta</li>
+      <li><strong>Eroarea din indulgenta si de severitate</strong> — evaluatori prost selectati sau pregatiti tind sa supraevalueze sau sa subevalueze sistematic, distorsionand distributia normala</li>
+      <li><strong>Eroarea tendintei centrale</strong> — tendinta de a evalua toti angajatii cu calificative medii, evitand extremele</li>
+      <li><strong>Efectul recent</strong> — evaluarea este influentata disproportionat de evenimentele recente, ignorand performanta pe intreaga perioada</li>
+      <li><strong>Eroarea de contrast</strong> — evaluarea unui angajat este influentata de performanta celui evaluat anterior</li>
+      <li><strong>Eroarea similaritatii</strong> — evaluatorul acorda note mai mari angajatilor similari cu el insusi ca personalitate sau valori</li>
+      <li><strong>Amenintarea individuala</strong> — unii angajati (de regula cei slabi) refuza procedeul de evaluare</li>
+    </ul>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)">Supraevaluarea apare din: tendinta de a ascunde erori de organizare, dorinta de a castiga bunavointa subalternilor, teama de tensiuni. Subevaluarea apare din: dorinta de a mentine angajatii in veghe, dorinta de a demonstra putere sau exigenta.</p>
+  </div>
+
+  <div class="thbox" style="background:#fff8e6;border-left:5px solid #e6a817;border:1px solid #f0d080">
+    <div class="thtag" style="color:#8a6000">Perspectiva contemporana (post-2020)</div>
+    <h3 style="color:#5a3e00">Erorile de evaluare in era algoritmilor si diversitatii</h3>
+    <p><strong>Bias-ul algoritmic</strong> este o eroare noua, specifica sistemelor automate de evaluare: algoritmii antrenati pe date istorice pot perpetua si amplifica discriminarile din trecut. Un algoritm Amazon de evaluare a CV-urilor a trebuit abandonat in 2018 dupa ce s-a dovedit ca discrimina sistematic candidatele femei, deoarece fusese antrenat pe date istorice in care barbatii dominau industria tech.</p>
+    <p><strong>Eroarea similaritatii</strong> (mentionata in suportul de curs) este amplificata in culturile organizationale omogene: managerii tind sa evalueze mai bine angajatii care le seamana ca background, educatie si stil de comunicare, reducand diversitatea si creativitatea echipei.</p>
+    <p><strong>Evaluarea in regim remote</strong> a creat noi surse de erori: managerii tind sa evalueze mai bine angajatii care sunt mai vizibili in videoconferinte (efectul de halou digital) si mai slab pe cei mai discreti dar egali ca performanta reala. Indicatorii de productivitate masurari digital (ore online, emailuri trimise) pot inlocui eronat evaluarea calitativa a rezultatelor.</p>
+    <p><strong>Standardele de performanta neclare</strong> devin mai problematice in muncca hibrida: ce inseamna prezenta, implicare sau vizibilitate intr-o echipa partial remote este un standard care trebuie redefinit explicit pentru fiecare context.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--red)">
+    <strong style="color:var(--navy)">4 scenarii</strong> despre identificarea si interpretarea erorilor in evaluarea performantelor.
+  </div>
+
+  <div class="prog-dots" id="eroriDots"></div>
+  <div id="eroriQ"></div>
+  <div class="scorebar" id="eroriScore" style="display:none">
+    <div class="scirc"><div class="snum" id="eroriSnum">0</div><div class="sden">/ 4</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="eroriSlab"></div><div style="font-size:13px;color:var(--muted)" id="eroriStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('erori');show('quiz')">Continua &rarr;</button></div>
+</div>
+
+<!-- QUIZ -->
+<div class="section" id="section-quiz">
+  <div class="shead"><div class="sicon ig">🧠</div><div><div class="sheading">Test de autoevaluare</div><div class="sdesc">8 intrebari din Capitolul 5</div></div></div>
+  <div class="prog-dots" id="quizDots"></div>
+  <div id="quizQ"></div>
+  <div class="scorebar" id="quizScore" style="display:none">
+    <div class="scirc"><div class="snum" id="quizSnum">0</div><div class="sden">/ 8</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="quizSlab"></div><div style="font-size:13px;color:var(--muted)" id="quizStxt"></div></div>
+  </div>
+  <div class="snav"><button class="btnsec" onclick="showSectionScore('quiz')">Vezi scorul</button><button class="btnpri" onclick="done('quiz');show('predare')">Mergi la trimitere &rarr;</button></div>
+</div>
+
+<!-- PREDARE -->
+<div class="section" id="section-predare">
+  <div class="shead"><div class="sicon ig">📤</div><div><div class="sheading">Trimite raspunsurile</div><div class="sdesc">Trimite scorurile profesorului</div></div></div>
+  <div class="score-summary" id="scoreSummary"></div>
+  <div class="pcard"><div style="font-size:14px;margin-bottom:12px">Progresul tau:</div><div id="checklist"></div></div>
+  <div class="subzone" id="subZone">
+    <h3>Esti pregatit/a?</h3>
+    <p>Scorurile si raspunsurile tale vor fi trimise profesorului.</p>
+    <button class="subbtn" id="subBtn" onclick="predaLucrarea()">📤 Trimite raspunsurile</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+var SUPA_URL='https://aarinakhxzndzuplflgm.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhcmluYWtoeHpuZHp1cGxmbGdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NDU2MzUsImV4cCI6MjEwNjMyMTYzNX0.z-K-iebBaGxyZ6K6iDi0wZReqfgmhMVcmzp7namNxNw';
+
+var PCONCEPTE=[
+  {tip:'Definitia performantei',q:'Un manager de vanzari evalueaza un agent comercial exclusiv pe baza cifrei de afaceri, ignorand calitatea relatiei cu clientii, rata de retentie si lucrul in echipa. Ce definitie a performantei contrazice aceasta abordare?',o:['Performanta = gradul de indeplinire a sarcinilor; cifra de afaceri este sarcina principala deci evaluarea e corecta','Performanta = comportamente si rezultate (Brumbach); ignorarea comportamentelor relevante face evaluarea incompleta','Performanta = contributia la obiectivele organizatiei; cifra de afaceri este singurul obiectiv relevant','Performanta nu poate include calitatea relatiei cu clientii deoarece este subiectiva'],c:1,e:'Brumbach (1988) defineste performanta ca suma comportamentelor si rezultatelor. Ignorarea comportamentelor relevante (calitatea relatiilor, colaborarea) in favoarea unui singur indicator cantitativ produce o evaluare incompleta si potential incorecta. Ambele dimensiuni trebuie luate in considerare.'},
+  {tip:'Cei 3 pasi ai evaluarii',q:'Un director HR prezinta echipei cifrele de vanzari ale fiecarui agent: agent A - 500.000 lei, agent B - 350.000 lei, agent C - 420.000 lei. La ce pas al evaluarii se afla in acest moment?',o:['Aprecierea: a stabilit calificativele pentru fiecare agent','Masurarea: a atasat determinanti cantitativi activitatii fiecarui agent','Decizia: a stabilit ierarhia agentilor pe baza cifrelor','Evaluarea propriu-zisa: procesul este complet'],c:1,e:'Masurarea consta in atasarea de determinanti cantitativi unui comportament, produs sau activitate. Prezentarea cifrelor de vanzari este exact etapa de masurare. Aprecierea ar urma abia dupa compararea acestor cifre cu un standard (target, medie echipa, performanta anterioara) pentru a stabili calificative.'},
+  {tip:'Cei 3 pasi ai evaluarii',q:'Dupa ce un manager a inregistrat ca agentul A a incheiat 7 contracte in valoare de 470.000 euro, el compara aceasta performanta cu targetul anual de 400.000 euro si cu media echipei de 350.000 euro si concluzioneaza ca activitatea agentului a fost excelenta. La ce pas al evaluarii este acum?',o:['Masurarea: a determinat cifrele concrete ale activitatii','Aprecierea: a stabilit un calificativ calitativ prin comparatie cu un standard si o baza de referinta','Decizia: a hotarat ca agentul va fi promovat','Evaluarea: procesul este finalizat dupa compararea cu targetul'],c:1,e:'Aprecierea consta in stabilirea unor calificative calitative prin comparatie cu un standard sau baza de referinta. In exemplul din suportul de curs, exact aceasta comparatie (performanta reala vs. target vs. media echipei) permite trecerea de la cifrele brute la calificativul excelent. Fara un standard de comparatie, masurarea nu poate produce o apreciere.'},
+  {tip:'Particularitati evaluare',q:'Un manager isi evalueaza subordonatii si, pentru a evita conflictele, formuleaza intotdeauna aprecierile pozitiv: subliniaza realizarile si prezinta problemele ca oportunitati de imbunatatire. Ce particularitate a evaluarii aplica corect?',o:['Evaluarea are caracter subiectiv: managerii interpreteaza criteriile prin propriul sistem de valori','Evaluarea trebuie sa fie preponderent pozitiva si constructiva, orientata spre viitor, nu distructiva','Evaluarea este un bilant al muncii depuse, deci trebuie sa reflecte realist si problemele','Evaluarea presupune discutii personale, deci tonul pozitiv este obligatoriu'],c:1,e:'Suportul de curs subliniaza explicit ca evaluarea trebuie sa fie preponderent pozitiva (nu negativă), mai degraba constructiva decat distructiva si cu orientare spre viitor, nu in trecut. Fiecare angajat trebuie sa constientizeze rezultatele si potentialul sau pentru a valorifica oportunitatile. Exemplul dat in curs: prefer sa formulezi o apreciere pozitiva inainte de a evidentia erorile.'},
+  {tip:'Obiectivele evaluarii',q:'O companie constata ca angajatii recrutati acum 2 ani, desi selectati riguros, au performante slabe. Directorul HR propune o analiza a procesului de selectie. La ce obiectiv al evaluarii performantelor corespunde aceasta utilizare?',o:['Recompensarea angajatilor: performantele slabe trebuie sanctionate','Identificarea nevoilor de training: angajatii selectati gresit au nevoie de formare','Validarea eficientei procesului de selectie: evaluarile posterioare confirma sau infirma calitatea selectiei','Furnizarea de feedback: angajatii trebuie informati despre performantele slabe'],c:2,e:'Suportul de curs identifica validarea eficientei si eficacitatii procesului de selectie ca unul dintre obiectivele evaluarii. Un proces de selectie complex si riguros va filtra mai bine candidatii. Evaluarile ulterioare angajarii confirma sau infirma calitatea selectiei: daca angajatii selectati au performante slabe sistematic, procesul de selectie trebuie revizuit.'},
+  {tip:'Tipuri de evaluare',q:'Un manager surprinde un moment exceptional: un angajat a gasit o solutie creativa care a economisit 50.000 lei intr-o singura zi. Il cheama imediat pentru a-l felicita si a inregistra incidentul. Ce tip de evaluare descrie aceasta situatie?',o:['Evaluare periodica: se face la intervale prestabilite','Evaluare spontana: determinata de un factor imprevizibil exceptional','Evaluare cantitativa: se bazeaza pe un criteriu numeric (50.000 lei)','Evaluare informala: nu implica o metodologie officiala'],c:1,e:'Evaluarile spontane sunt determinate de factori imprevizibili a caror actiune nu poate fi anticipata. Descoperirea unei solutii creative cu impact financiar imediat este exact un astfel de factor. Suportul de curs mentioneaza si tehnica incidentelor critice, care recomanda ca managerul sa ia contact cu angajatul imediat ce s-a produs evenimentul, nu sa astepte pana la urmatoarea evaluare periodica.'},
+  {tip:'Obiectivele evaluarii',q:'Un programator primeste, in urma evaluarii, un raport care indica ca performantele sale tehnice sunt excelente dar ca are lacune in cunostintele economico-financiare, necesare pentru noul proiect la care va lucra. Ce obiectiv al evaluarii este servit de aceasta constatare?',o:['Recompensarea angajatilor: performantele tehnice excelente merita o marire salariala','Dezvoltarea planului de cariera: lacunele identifica un traseu de crestere profesionala','Identificarea nevoilor de training: carentele profesionale semnalate justifica participarea la un curs de analiza economico-financiara','Furnizarea de feedback: angajatul este informat despre propriile rezultate'],c:2,e:'Suportul de curs ofera exact acest exemplu: unui programator caruia i se solicita dezvoltarea unui program de analiza economico-financiara nu ii sunt suficiente cunostintele informatice; se impune participarea la un curs de analiza economico-financiara. Identificarea si satisfacerea nevoilor de pregatire si dezvoltare este al treilea obiectiv al evaluarii performantelor.'},
+  {tip:'Particularitati evaluare',q:'Dupa o evaluare, un angajat primeste un calificativ nefavorabil. El considera ca evaluatorul nu a inteles specificul muncii sale si ca criteriile nu reflecta realitatea. Ce particularitate a evaluarii explica aceasta situatie?',o:['Evaluarea are componenta emotionala: angajatul este demotivat','Evaluarea are caracter subiectiv: evaluatorul interpreteaza criteriile prin propriul sistem de valori, diferit de cel al angajatului','Evaluarea este un bilant al muncii depuse: angajatul pur si simplu nu accepta rezultatele','Evaluarea este sistematica: criteriile standard nu pot fi adaptate specificului fiecarui post'],c:1,e:'Suportul de curs identifica caracterul subiectiv al evaluarii ca particularitate specifica: activitatea este realizata de manageri, colegi sau evaluatori externi care au tendinta de a interpreta semnificatia unui criteriu in functie de propriul sistem de valori. Diferenta dintre sistemul de valori al evaluatorului si cel al angajatului produce exact tensiunea descrisa.'},
+  {tip:'Tipuri de evaluare',q:'O companie realizeaza evaluari de performanta bazate pe criterii nestabilite in prealabil, axandu-se pe personalitatea si comportamentul angajatilor, fara documente formale. Cum se clasifica aceasta evaluare?',o:['Evaluare periodica cantitativa','Evaluare nesistematica informala','Evaluare sistematica formala','Evaluare spontana cantitativa'],c:1,e:'Evaluarile nesistematice au la baza criterii care nu au fost prestabilite si se axeaza pe criterii calitative referitoare la personalitate, comportament si abilitati. Evaluarile informale nu implica o metodologie officiala si au un caracter mai subiectiv decat cele formale. Combinatia descrisa (criterii neprestabilite, fara documente formale, axata pe personalitate) corespunde evaluarii nesistematice informale.'},
+  {tip:'Obiectivele evaluarii',q:'Un angajat afla in urma evaluarii ca are rezultate excelente pe postul actual si ca are potential de leadership. Managerul ii prezinta un traseu posibil de avansare in urmatorii 3 ani. Ce obiectiv al evaluarii este servit?',o:['Recompensarea angajatilor: rezultatele excelente merita recunoastere','Furnizarea de feedback: angajatul este informat despre rezultatele sale','Dezvoltarea planurilor de cariera: pe baza performantelor se elaboreaza planuri individuale de cariera','Validarea selectiei: angajatul performant confirma calitatea procesului de selectie'],c:2,e:'Suportul de curs identifica dezvoltarea planurilor de cariera ale angajatilor ca al patrulea obiectiv: in functie de performantele obtinute, companiile pot dezvolta planuri de cariera individual si colective. Pe baza rezultatelor evaluarii, pentru fiecare angajat este formulat un set de recomandari si masuri ca premisa a realizarii obiectivelor de cariera.'},
+  {tip:'Cei 3 pasi ai evaluarii',q:'La finalul anului, managementul ierarhizeaza toti angajatii si decide: promovarea primilor 3, bonusuri pentru urmatoarele 10 pozitii, programe de training pentru urmatoarele 15 si avertismente pentru ultimii 5. La ce pas al evaluarii corespunde aceasta activitate?',o:['Masurarea: s-au atasat valori numerice performantelor','Aprecierea: s-au stabilit calificative pe baza ierarhiei','Decizia: aprecierea este inclusa intr-un sistem de ierarhizare si genereaza masuri concrete','Evaluarea propriu-zisa: procesul este finalizat prin comunicarea rezultatelor'],c:2,e:'Decizia este etapa in care aprecierea este inclusa intr-un sistem de notare sau ierarhizare care evidentiaza performanta fiecarui angajat. Suportul de curs mentioneaza ca deciziile adoptate (modificarea recompensarii, concedierea, transferul, retrogradarea, promovarea, trainingul) au la baza performantele obtinute. Exemplul descris include exact aceasta gama de decizii diferentiate.'},
+  {tip:'Particularitati evaluare',q:'O companie realizeaza evaluari anuale in care angajatul si managerul se intalnesc individual, managerul comunica rezultatele, identifica impreuna cauzele problemelor si stabilesc masuri concrete. Ce particularitate a evaluarii este ilustrata?',o:['Evaluarea este o operatiune periodica scrisa: se face anual si rezultatele sunt consemnate','Evaluarea presupune discutii personale: interviul de evaluare in care evaluatorul comunica rezultatele si identifica cauzele disfunctionalitatilor','Evaluarea este un proces sistematic: criteriile sunt prestabilite','Evaluarea are caracter subiectiv: depinde de relatia dintre manager si angajat'],c:1,e:'Suportul de curs identifica explicit ca evaluarea presupune discutii personale intre angajatul evaluat si evaluator. In cadrul interviului de evaluare, evaluatorul comunica rezultatele, identifica cauzele care au generat disfunctionalitati si prezinta oportunitatile de imbunatatire. Aceasta particularitate face din evaluare un instrument de dialog, nu doar de masurare.'}
+];
+
+var PMETODE=[
+  {tip:'Metode de evaluare',q:'Un departament HR vrea sa evalueze angajatii in raport cu standarde clare, cu descriptori specifici pentru fiecare nivel de performanta, pe fiecare dimensiune a postului. Ce metoda este cea mai potrivita?',o:['Eseul scris: permite surprinderea tuturor aspectelor relevante','Scale de evaluare axate pe comportament: evalueaza comportamente concrete, observabile, specifice postului, pe niveluri de performanta','Compararea simpla: ierarhizeaza angajatii de la cel mai bun la cel mai slab','Tehnica incidentelor critice: inregistreaza aspectele exceptionale'],c:1,e:'Scalele de evaluare axate pe comportament sunt mijloace de evaluare continua in care punctele de clasificare sunt exemple de comportament legate de un anumit post. Scalele reprezinta niveluri specifice de performanta pentru fiecare dimensiune caracteristica postului, evidentiind comportamente concrete, observabile si masurabile. Aceasta metoda raspunde exact cerintei descrise.'},
+  {tip:'Metode comparative',q:'Un manager trebuie sa ierarhizeze 20 de angajati de la cel mai performant la cel mai slab, pe baza unui criteriu global. Ce metoda comparativa este descrisa si care este principalul sau dezavantaj?',o:['Compararea pe perechi: permite identificarea celui mai performant din fiecare pereche; dezavantaj: numarul mare de perechi (190)','Compararea simpla (ordonarea rangurilor): ierarhizarea de la cel mai bun la cel mai slab; dezavantaj: diferenta dintre ranguri e egala, ceea ce nu corespunde realitatii','Distribuirea fortata: distribuie angajatii pe niveluri Gauss; dezavantaj: impune o distributie care poate fi artificiala','Tehnica incidentelor critice: ierarhizeaza pe baza evenimentelor exceptionale; dezavantaj: ignora performanta de rutina'],c:1,e:'Compararea simpla (ordonarea rangurilor) consta exact in ierarhizarea indivizilor in sens descrescator, de la cel mai bun la cel mai slab. Principalul dezavantaj mentionat in suportul de curs: marimea diferentei dintre performantele celor evaluati este egala in ierarhie, ceea ce nu corespunde intotdeauna realitatii (diferenta intre locul 1 si 2 poate fi mult mai mare decat intre locul 10 si 11).'},
+  {tip:'Cine evalueaza',q:'O universitate cere studentilor sa evalueze performantele profesorilor la cursuri. Ce avantaj si ce risc specific identifica suportul de curs pentru aceasta abordare?',o:['Avantaj: studentii sunt obiectivi deoarece nu au relatii ierarhice; risc: evaluarile pot fi influentate de dificulatea cursului','Avantaj: se pot identifica managerii (profesorii) incompetenti; risc: frica de represalii face evaluarea subiectiva si managerii pot deveni prea amabili','Avantaj: evalueaza performanta tehnica a profesorilor; risc: studentii nu au expertiza necesara','Avantaj: feedback direct si rapid; risc: profesorii pot modifica continutul cursului in functie de popularitate'],c:1,e:'Suportul de curs foloseste exact acest exemplu (evaluarea profesorilor de catre studenti) si identifica: avantaj - se poate evidentia performanta manageriala si identifica managerii incompetenti; risc - frica de represalii face evaluarea neobiectiva, iar managerii incearca sa fie amabili diminuand exigenta fata de subordonati. Exemplul profesorului care da note mari pentru a nu avea probleme cu studentii ilustreaza acest risc.'},
+  {tip:'Cine evalueaza',q:'O companie vrea sa evalueze directorul general, dar considera ca niciunul dintre angajati nu poate face o evaluare obiectiva. Ce tip de evaluator recomanda suportul de curs si care este avantajul sau principal?',o:['Autoevaluarea directorului: el se cunoaste cel mai bine','Evaluatorii externi: obiectivitate maxima prin lipsa dependentei ierarhice','Evaluarea de catre consiliul de administratie: autoritate ierarhica superioara','Evaluarea colectiva a subordonatilor: perspectiva completa din interior'],c:1,e:'Suportul de curs mentioneaza ca evaluarea poate fi efectuata de persoane din afara organizatiei si ca expertii sunt chemati pentru a analiza munca directorului general sau a evalua potentialul unei persoane. Avantajul: lipsa oricarei dependente ierarhice face ca evaluarile sa fie cat mai corecte. Dezavantaj: nu cunosc toate elementele organizatiei si sunt costisitoare si consuma timp.'},
+  {tip:'Metode de evaluare',q:'Un manager inregistreaza intr-un jurnal toate comportamentele exceptionale ale subordonatilor — atat cele pozitive (solutii inovatoare, depasiri de target) cat si cele negative (absente nemotivate, erori grave). Le discuta imediat cu angajatul in cauza, nu la evaluarea anuala. Ce tehnica aplica?',o:['Eseul scris: angajatii prezinta in scris realizarile si neimplinirile','Scalele de evaluare axate pe comportament: evalueaza comportamentele pe scale graduale','Tehnica incidentelor critice: inregistrarea permanenta a aspectelor exceptionale, discutate imediat la producere','Analiza unui domeniu de activitate: evaluarea colectiva a compartimentului'],c:2,e:'Tehnica incidentelor critice presupune inregistrarea permanenta a aspectelor, evenimentelor sau elementelor favorabile si nefavorabile care reprezinta exceptii fata de rutina activitatii. Suportul de curs subliniaza ca la producerea unui incident critic, managerul are datoria sa ia contact cu salariatul imediat, nu sa astepte data evaluarii periodice. Jurnalul de incidente critice face parte din dosarul de personal.'},
+  {tip:'Metode de evaluare',q:'Un departament HR introduce un instrument de evaluare in care angajatilor li se aplica o lista de atribute (pozitive si negative), fiecare primind +1 sau -1, iar scorul final este comparat cu cel al unui angajat similar din organizatie. Ce metoda este aceasta si care este dezavantajul sau?',o:['Scala de evaluare grafice: vizualizeaza performanta pe multiple dimensiuni; dezavantaj: subiectiva','Scala pe puncte: lista de atribute cu valori +1/-1; dezavantaj: lista nu poate fi corelata complet cu particularitatile locului de munca','Compararea pe perechi: compara angajati doi cate doi; dezavantaj: numar mare de perechi','Metoda listelor de verificare: set de cerinte comportamentale cu indicatori valorici; dezavantaj: subiectivism in alegerea criteriilor'],c:1,e:'Suportul de curs descrie explicit scala pe puncte ca o lista de evaluare cu atribute care pot caracteriza o persoana, cu valori +1 pentru atribute pozitive si -1 pentru cele negative. Dezavantajul mentionat: lista nu poate fi corelata pe deplin cu particularitatile locului de munca. Scorul final este util prin comparare cu cel al unui angajat care lucreaza in conditii similare.'},
+  {tip:'Cine evalueaza',q:'Intr-o evaluare colectiva, 5 manageri evalueaza acelasi angajat si obtine note diferite. La final se calculeaza media notelor. Suportul de curs identifica o eroare specifica acestui proces. Care este?',o:['Efectul de halou: toti managerii sunt influentati de un singur criteriu','Ignoranta colectiva: mai multi superiori exprima opinii diferite, rezultatele finale reprezinta valori medii care pot duce la nivelarea aprecierilor','Eroarea de contrast: fiecare manager il compara pe angajat cu cel evaluat anterior','Eroarea similaritatii: managerii acorda note mai mari angajatilor care le seamana'],c:1,e:'Suportul de curs mentioneza explicit ignoranta colectiva ca risc al evaluarii de catre un grup de manageri: mai multi superiori isi exprima opinii diferite, rezultatele finale reprezentand valori medii care pot duce la nivelarea aprecierilor. Cu alte cuvinte, un volum mare de informatii nu presupune in mod necesar o informare mai buna.'},
+  {tip:'Metode de evaluare',q:'O companie introduce un sistem in care angajatii sunt distribuiti obligatoriu in 5 categorii de performanta (10% excelent, 20% bun, 40% mediu, 20% sub asteptari, 10% slab), indiferent de performantele reale. Ce metoda este aceasta si ce problema poate genera?',o:['Compararea simpla: ierarhizeaza in ordine descrescatoare; problema: diferentele nu sunt egale','Distribuirea fortata: impune o distributie Gauss; problema: intr-o echipa de exceptie, cineva trebuie sa fie in categoria slaba chiar daca nu este','Scalele de evaluare cu pasi multipli: descrie niveluri de performanta; problema: subiectivism in incadrare','Managementul prin obiective: evalueaza in raport cu obiective; problema: obiectivele pot fi nerealiste'],c:1,e:'Compararea prin distribuire fortata porneste de la premisa ca angajatii pot fi distribuiti pe niveluri de performanta care verifica distributia normala (Gauss). Suportul de curs noteaza ca ponderea pe care o prezinta C.D. Fischer este dependenta de numerosi factori si nu poate constitui un standard valabil pentru oricare unitate. Problema practica: intr-o echipa uniforma sau de exceptie, cineva va fi plasat artificial in categoria slaba.'},
+  {tip:'Cine evalueaza',q:'Un angajat care lucreaza izolat, cu o meserie unica in organizatie, este evaluat de propriul sef ierarhic care nu cunoaste specificul tehnic al muncii sale. Ce tip de evaluare alternativa recomanda suportul de curs pentru astfel de situatii?',o:['Evaluarea de catre evaluatori externi specializati in domeniu','Autoevaluarea: daca un salariat lucreaza izolat sau are o meserie unica, el este singurul indreptatit sa isi evalueze performanta','Evaluarea de catre colegi de pe pozitii echivalente din alte companii','Omiterea evaluarii pana cand seful dobandeste cunostinte tehnice suficiente'],c:1,e:'Suportul de curs mentioneaza explicit ca autoevaluarea poate fi aplicata numai in anumite situatii, una dintre ele fiind exact aceasta: daca un salariat lucreaza izolat sau are o meserie unica, el este singurul indreptatit sa isi evalueze performanta. Metoda permite angajatilor sa isi evalueze singuri trasaturile si sa compare rezultatele cu standardele pentru postul respectiv.'},
+  {tip:'Metode de evaluare',q:'Un departament HR vrea sa evalueze un intreg compartiment de logistica, nu doar angajatii individuali. Doreste sa identifice disfunctionalitatile, lipsa de comunicare si calitatea manageriala. Ce metoda este cea mai potrivita?',o:['Compararea simpla: ierarhizeaza toti angajatii departamentului','Eseul scris: fiecare angajat descrie activitatea proprie','Analiza unui domeniu de activitate: echipa HR + specialisti ai compartimentului, interviuri structurate, evaluare colectiva si individuala','Autoevaluarea colectiva: toti angajatii se evalueaza reciproc'],c:2,e:'Analiza unui domeniu de activitate consta in crearea unei echipe formata din specialistii HR si specialistii compartimentului vizat. Grupul formuleaza structuri de interviuri pe care le completeaza toti salariatii compartimentului. Din analiza acestora rezulta modul general de desfasurare a activitatilor, performantele colective si individuale, disfunctionalitatile si lipsa de comunicare. Suportul de curs descrie aceasta metoda ca laborioasa dar completa.'},
+  {tip:'Metode de evaluare',q:'Un evaluator prezinta raportul de performanta al unui angajat fara sa il fi consultat sau sa fi tinut cont de perspectiva acestuia. Compara aceasta abordare cu eseul scris ca metoda de evaluare.',o:['Eseul scris este similar: si in el evaluatorul prezinta perspectiva sa despre angajat','Eseul scris este opus: angajatul insusi elaboreaza prezentarea realizarilor, neimplinirilor si disfunctionalitatilor, cu asistenta sefului doar pentru structura, nu pentru continut','Eseul scris este o varianta formalizata a aceleiasi abordari','Eseul scris si abordarea descrisa sunt ambele metode subiective'],c:1,e:'Eseul scris consta in elaborarea de catre titularul postului a prezentarii in scris a realizarilor, neimplinirilor, disfunctionalitatilor si altor aspecte legate de munca. Salariatul poate beneficia de asistenta sefului direct numai pentru structura materialului; seful nu poate interveni in relatarea faptelor. Aceasta este opusul evaluarii unilaterale de catre manager, deoarece pune angajatul in centrul procesului de evaluare.'},
+  {tip:'Cine evalueaza',q:'Intr-o evaluare, colegii de pe pozitii echivalente se aduna intr-un grup deschis pentru a se evalua reciproc. Ce problema identifica suportul de curs pentru aceasta abordare?',o:['Colegii nu au autoritate ierarhica, deci evaluarile sunt invalide','Daca un grup de salariati se aduna pentru a se evalua intre ei, relatiile viitoare de munca se pot deteriora substantial','Colegii tind sa se supraevalueze reciproc pentru a mentine armonia','Aceasta metoda este ilegala in Romania'],c:1,e:'Suportul de curs subliniaza ca evaluarea reciproca intre colegi de pe pozitii echivalente se foloseste destul de rar sub forma de grup deschis, tocmai pentru ca daca un grup de salariati se aduna pentru a se evalua intre ei, relatiile viitoare de munca se pot deteriora in mod substantial. De aceea sunt utilizate de regula evaluarile individuale sau forma combinata (aprecierile sefului plus ale colegilor).'},
+  {tip:'Perspectiva contemporana',q:'O companie inlocuieste evaluarea anuala de performanta cu check-in-uri lunare intre manager si fiecare angajat, in care se discuta progresul, obstacolele si ajustarile necesare. Ce avantaj principal aduce aceasta abordare comparativ cu evaluarea anuala traditionala?',o:['Check-in-urile lunare sunt mai ieftine deoarece nu necesita formulare elaborate','Feedback-ul continuu si imediat permite corectarea comportamentelor si ajustarea obiectivelor mult mai rapid decat asteptarea unui an; reduce surprizele la evaluarea finala','Check-in-urile lunare elimina complet nevoia evaluarii formale anuale','Angajatii prefera check-in-urile deoarece primesc note mai mari'],c:1,e:'Feedback-ul continuu (adoptat de Adobe, Microsoft, Deloitte si alte companii mari dupa 2012) adreseaza o limitare majora a evaluarii anuale: asteptarea unui an pentru a comunica feedback critic este ineficienta si demotivanta. In termenii suportului de curs, aceasta practica amplifica particularitatea 3 (discutii personale) si obiectivul 2 (furnizarea de feedback) la o frecventa mult mai mare. Angajatii primesc informatii despre performanta cand inca mai pot face ajustari, nu retrospectiv.'},
+  {tip:'Perspectiva contemporana',q:'O companie multinationale implementeaza evaluarea 360 de grade: fiecare angajat primeste feedback de la manager, colegi de acelasi nivel, subordonati directi si face si o autoevaluare. Toate cele 4 perspective sunt sintetizate intr-un raport integrat. Cum se raporteaza aceasta metoda la categoriile de evaluatori identificate in suportul de curs?',o:['Evaluarea 360 grade este o metoda complet noua care nu se regaseste in suportul de curs','Evaluarea 360 grade combina simultan 4 din cele 5 categorii de evaluatori identificate in suportul de curs (manager, colegi, subordonati, autoevaluare), oferind o imagine mai completa decat orice sursa individuala','Evaluarea 360 grade este echivalenta cu evaluarea de catre evaluatori externi','Suportul de curs recomanda explicit evaluarea 360 grade ca metoda preferata'],c:1,e:'Evaluarea 360 grade nu este mentionata explicit in suportul de curs, dar se construieste pe cadrul sau: managerii evalueaza subordonatii (categoria 1), subordonatii evalueaza superiorii (categoria 2), colegii de pe pozitii echivalente se evalueaza (categoria 3) si autoevaluarea (categoria 4). Evaluatorii externi (categoria 5) sunt uneori adaugati pentru pozitii de top. Prin combinarea acestor perspective, evaluarea 360 grade reduce subiectivismul si erorile specifice oricarei surse individuale.'}
+];
+
+var PERORI=[
+  {tip:'Erori in evaluare',q:'Un manager evalueaza un angajat care a facut o grava greseala in urma cu o luna. Desi performanta sa pe intreg anul a fost excelenta, managerul ii acorda un calificativ slab. Ce eroare de evaluare a comis?',o:['Eroarea din severitate: managerul este prea exigent in general','Efectul recent: evaluarea este influentata disproportionat de evenimentele recente, ignorand performanta pe intreaga perioada','Efectul de halou: un singur eveniment (negativ) influenteaza intreaga evaluare','Eroarea criteriului unic: s-a evaluat pe baza unui singur incident'],c:1,e:'Efectul recent apare atunci cand evaluarea este influentata disproportionat de evenimentele din perioada recenta, ignorand performanta pe intreaga perioada de evaluare. Un angajat cu performante excelente pe tot anul, dar cu o greseala recenta, nu ar trebui evaluat pe baza acelei greseli recente. Aceasta eroare poate fi evitata prin inregistrarea sistematica a performantelor pe intreaga perioada.'},
+  {tip:'Erori in evaluare',q:'Un manager evalueaza toti angajatii cu calificativul bun, indiferent de diferentele reale de performanta. Explica el: am vrut sa evit tensiunile si nemultumirile in echipa. Ce eroare a comis si de ce este grava?',o:['Eroarea din indulgenta: toti angajatii primesc calificative superioare realitatii; este grava deoarece nu recompenseaza diferentiat performantele','Eroarea tendintei centrale: toti angajatii sunt evaluati cu calificative medii, evitand extremele; este grava deoarece nu diferentiaza performantele si elimina valoarea informatiei pentru decizii HR','Efectul de halou: un criteriu pozitiv (comportamentul agreabil) influenteaza toate celelalte calificative','Eroarea de contrast: evaluatorul compara angajatii intre ei, nu cu standardele'],c:1,e:'Eroarea tendintei centrale este determinata de tendinta unor manageri de a evalua cu calificative medii, evitand extremele pentru a nu genera conflicte. Aceasta eroare elimina practic valoarea informatiei: daca toti angajatii sunt buni, nu mai exista baza pentru decizii de promovare, recompensare diferentiata sau programe de imbunatatire. Motivatia evitarii tensiunilor este exact cauza identificata in suportul de curs.'},
+  {tip:'Erori in evaluare',q:'Un manager evalueaza un angajat ca excelent pe toate dimensiunile postului, deoarece acesta are o prezenta impecabila si vorbeste convingator in sedinte. In realitate, rezultatele sale cantitative sunt mediocre. Ce eroare a comis managerul?',o:['Eroarea similaritatii: managerul ii acorda note mari deoarece angajatul ii seamana','Efectul de halou/aura: managerul este orbit de un singur criteriu pozitiv (prezenta, comunicare) si minimizeaza sau evalueaza automat pozitiv celelalte criterii','Eroarea evaluarii logice: managerul a aplicat o logica gresita in interpretarea datelor','Eroarea din indulgenta: managerul supraevalueaza sistematic toti angajatii'],c:1,e:'Efectul de aura/halou este fenomenul care se produce cand evaluatorul ia in considerare un singur criteriu pozitiv, celelalte criterii fiind minimalizate sau evaluate cvasiautomat in acelasi sens. Suportul de curs descrie evaluatorul ca orbit de aspectul adoptat subiectiv ca relevant. In exemplul descris, prezenta si comunicarea sunt un singur criteriu care genereaza o constelatatie de halouri pozitive pe toate dimensiunile.'},
+  {tip:'Erori in evaluare',q:'Dupa o evaluare, un angajat constata ca a primit calificative mari la toate criteriile, cu exceptia celui legat de punctualitate, unde a primit calificativ slab. Cu toate acestea, calificativul final este slab. Cum explici aceasta situatie prin sursele de erori din suportul de curs?',o:['Efectul criteriului unic: evaluatorul a acordat calificativul final bazat exclusiv pe punctualitate, ignorand performantele excelente la celelalte criterii','Eroarea tendintei centrale: evaluatorul a aplatizat toate calificativele','Efectul de halou negativ: punctualitatea slaba a influentat celelalte calificative facandu-le mediocre','Eroarea de contrast: angajatul anterior a fost foarte punctual'],c:0,e:'Efectul criteriului unic apare cand evaluarea, desi planificata a fi complexa, se axeaza pe analiza unui singur criteriu, ca si cand analiza ar fi unidimensionala. Suportul de curs mentioneaza ca un salariat poate fi clasificat ca performant sau neperformant dupa un singur criteriu, facandu-se abstractie de celelalte aspecte. In cazul descris, punctualitatea slaba a devenit singurul criteriu relevant, ignorand performantele excelente pe celelalte dimensiuni.'},
+  {tip:'Erori in evaluare',q:'Un manager nou evalueaza toti angajatii cu calificative foarte mari, deoarece vrea sa castige increderea si respectul echipei sale. Ce eroare comite si ce consecinte negative are aceasta?',o:['Eroarea tendintei centrale: evita extremele acordand calificative medii','Eroarea din indulgenta: supraevalueaza angajatii; consecinte: eliminarea diferentierii performantelor, lipsa stimulentelor pentru imbunatatire, distorsionarea distributiei normale','Efectul de halou: dorinta de a fi apreciat influenteaza toate calificativele','Amenintarea individuala: managerul simte ca angajatii il ameninta'],c:1,e:'Suportul de curs identifica eroarea din indulgenta ca tendinta evaluatorilor prost selectati sau inadecvat pregatiti de a supraevalua angajatii. Printre motivele supraevaluarii: dorinta unor manageri de a castiga bunavointa subalternilor. Consecinte: distributia normala a calificativelor este distorsionata, performantele nu mai pot fi diferentiate, stimulentele pentru imbunatatire dispar, deciziile de promovare si recompensare nu mai pot fi fundamentate pe performante reale.'},
+  {tip:'Erori in evaluare',q:'Un manager evalueaza doi angajati in aceeasi zi. Primul angajat are performante exceptionale. Al doilea are performante medii, dar dupa evaluarea primului angajat, managerul ii acorda calificative si mai slabe decat merita in mod obiectiv. Ce eroare a aparut?',o:['Efectul recent: evaluatorul este influentat de evaluarea recenta a primului angajat','Eroarea de contrast: evaluarea unui angajat este influentata de performanta celui evaluat anterior','Eroarea similaritatii: angajatii sunt prea diferiti ca profil','Efectul de halou: performantele exceptionale ale primului influenteaza perceptia celui de-al doilea'],c:1,e:'Eroarea de contrast apare cand evaluarea unui angajat este influentata de performanta celui evaluat anterior. Dupa un angajat cu performante exceptionale, cel mediu va parea si mai slab prin comparatie, chiar daca in termeni absoluti performantele sale sunt acceptabile. Aceasta eroare poate fi evitata prin evaluarea fiecarui angajat in raport cu standardele postului, nu cu ceilalti angajati evaluati recent.'},
+  {tip:'Perspectiva contemporana',q:'O companie tech foloseste un algoritm pentru a evalua productivitatea angajatilor remote, masurandu-se: numarul de emailuri trimise, orele de conectare la sistemele companiei si frecventa mesajelor in chat-ul intern. Un angajat cu performante reale excelente (livrari de calitate, impact masurabil) primeste scor slab deoarece lucreaza concentrat, trimite putine emailuri si prefera comunicarea directa. Ce eroare moderna ilustreaza aceasta situatie?',o:['Eroarea din severitate: algoritmul este prea exigent','Efectul criteriului unic digital: indicatorii de activitate vizibila (emailuri, conectare) inlocuiesc eronat evaluarea rezultatelor reale; masurarea activitatii nu este echivalenta cu masurarea performantei','Eroarea tendintei centrale: algoritmul niveleza toate scorurile','Efectul de halou: activitatea scazuta in chat influenteaza negativ perceptia generala'],c:1,e:'Aceasta este o manifestare moderna a erorii criteriului unic: algoritmul masoara activitatea vizibila digital (proxy pentru prezenta), nu performanta reala (calitatea livrarilor, impactul). In muncca remote, managerii si sistemele automate sunt tentati sa confunde vizibilitatea digitala cu productivitatea. Solutia corecta este evaluarea bazata pe rezultate (output-uri clare, masurabile) nu pe activitate (input-uri vizibile). Aceasta conecteaza cu definitia performantei din suportul de curs: comportamente si rezultate, nu indicatori de activitate.'},
+  {tip:'Erori in evaluare',q:'Un manager care are un stil de munca analitic si metodic tinde sa acorde calificative mai mari angajatilor similari lui, care lucreaza ordonat si sistematic, chiar daca rezultatele lor nu sunt mai bune decat ale angajatilor cu stil diferit. Ce eroare descrie aceasta situatie?',o:['Eroarea din severitate: managerul aplica standarde prea inalte pentru cei nesimilari','Eroarea similaritatii: evaluatorul acorda note mai mari angajatilor cu trasaturi similare cu ale lui','Efectul de halou: stilul de lucru analitic influenteaza toate calificativele','Eroarea evaluarii logice: managerul presupune logic ca un stil ordonat produce performante mai bune'],c:1,e:'Eroarea similaritatii apare cand evaluatorul acorda note mai mari angajatilor similari cu el insusi ca personalitate, valori sau stil de munca. Aceasta este una dintre sursele de erori mentionate in suportul de curs (Mathis si Manolescu). Evaluarea devine subiectiva si favorizeaza angajatii care par mai familiari evaluatorului, indiferent de performantele reale.'},
+  {tip:'Erori in evaluare',q:'O companie realizeaza evaluari anuale cu criterii formulate vag: activitate buna, rezultat superior, atitudine corespunzatoare. Evaluatorii acorda calificative diferite pentru acelasi angajat, in functie de propria interpretare. Ce eroare fundamentala genereaza aceste criterii?',o:['Efectul criteriului unic: se foloseste un singur criteriu ambiguu pentru intreaga evaluare','Standarde de performanta neclare: indicatorii greu de definit sau formulati ambiguu fac evaluarea irelevanta si subiectiva','Eroarea evaluarii logice: evaluatorii aplica o logica proprie in interpretare','Eroarea tendintei centrale: evaluatorii prefera calificativele medii pentru a evita interpretarile extreme'],c:1,e:'Suportul de curs identifica standardele de performanta neclare ca sursa de erori: apar cand aspectele evaluate nu pot fi cuantificate sau formalizate. Criteriile formulate ambiguu (activitate buna, rezultat superior) fac evaluarea irelevanta. Suportul citeaza explicit astfel de formulari ca exemple de standarde neclare si subliniaza ca este sarcina specialistilor sa gaseasca formule precise, lipsite de ambiguitate.'}
+];
+
+var PQUIZ=[
+  {q:'Performanta, conform definitiei lui Brumbach (1988), inseamna:',o:['Gradul de indeplinire a sarcinilor la nivelul postului','Comportamente si rezultate, ambele evaluate prin prisma obiectivelor','Contributia financiara a angajatului la profitul organizatiei','Numarul de sarcini finalizate intr-o perioada determinata'],c:1,e:'Brumbach (1988) defineste performanta ca suma comportamentelor si rezultatelor. Comportamentele sunt analizate si evaluate prin prisma rezultatelor obtinute. Aceasta definitie este mai cuprinzatoare decat cea bazata exclusiv pe rezultate.'},
+  {q:'Care sunt cei 3 pasi consecutivi ai evaluarii performantelor?',o:['Planificare, implementare, control','Masurarea, aprecierea si decizia','Observarea, compararea si comunicarea','Stabilirea criteriilor, colectarea datelor si redactarea raportului'],c:1,e:'Evaluarea performantelor presupune parcurgerea a 3 pasi consecutivi: masurarea (atasarea de determinanti cantitativi), aprecierea (stabilirea de calificative prin comparatie cu un standard) si decizia (includerea aprecierii intr-un sistem de notare sau ierarhizare).'},
+  {q:'Ce obiectiv al evaluarii este servit cand performantele slabe ale angajatilor nou angajati determina revizuirea procesului de selectie?',o:['Recompensarea angajatilor','Identificarea nevoilor de training','Validarea eficientei procesului de selectie','Dezvoltarea planurilor de cariera'],c:2,e:'Validarea eficientei si eficacitatii procesului de selectie este al 5-lea obiectiv al evaluarii performantelor. Evaluarile posterioare angajarii confirma sau infirma calitatea selectiei: daca angajatii selectati au performante slabe sistematic, procesul de selectie trebuie revizuit.'},
+  {q:'Evaluarea formala difera de evaluarea informala prin aceea ca:',o:['Evaluarea formala este realizata de evaluatori externi','Evaluarea formala are la baza o metodologie oficiala stabilita in prealabil; evaluarea informala este aprecierea facuta de sef in cursul muncii obisnuite','Evaluarea formala se face anual; evaluarea informala trimestrial','Evaluarea formala include interviul de evaluare; cea informala nu'],c:1,e:'Evaluarea formala are la baza o metodologie officiala, stabilita in prealabil la nivelul organizatiei. Evaluarea informala nu implica o astfel de metodologie si reprezinta aprecierea facuta angajatilor de catre seful ierarhic direct in cursul muncii obisnuite. Evaluarea informala are un pronuntat caracter subiectiv, spre deosebire de cea formala care este mai obiectiva.'},
+  {q:'Efectul de halou/aura in evaluarea performantelor inseamna:',o:['Evaluatorul acorda calificative bazate pe prima impresie despre angajat','Evaluatorul este orbit de un singur criteriu, celelalte criterii fiind minimalizate sau evaluate automat in acelasi sens','Evaluatorul acorda calificative mai mari angajatilor similari cu el','Evaluatorul evalueaza toti angajatii cu calificative medii'],c:1,e:'Efectul de halou/aura este fenomenul care se produce cand evaluatorul ia in considerare un singur criteriu (de obicei subiectiv ales), celelalte criterii fiind minimalizate sau evaluate automat in acelasi sens. Suportul de curs descrie evaluatorul ca orbit de aspectul adoptat ca relevant.'},
+  {q:'Compararea pe perechi ca metoda de evaluare:',o:['Consta in ierarhizarea tuturor angajatilor de la cel mai bun la cel mai slab','Distribuie angajatii pe niveluri de performanta conform distributiei normale Gauss','Implica evaluarea angajatilor doi cate doi pentru a identifica cel mai performant; numarul de perechi este N(N-1)/2','Se bazeaza pe inregistrarea permanenta a evenimentelor exceptionale'],c:2,e:'Compararea pe perechi este potrivita cand persoanele evaluate ocupa posturi identice sau echivalente. Scopul este identificarea celui mai performant salariat dintre cei doi supusi evaluarii. Numarul de perechi se calculeaza dupa formula N(N-1)/2. Procedeul se repeta si generalizeaza pentru toti salariatii.'},
+  {q:'Tehnica incidentelor critice presupune ca discutia cu angajatul in cauza sa aiba loc:',o:['La urmatoarea evaluare periodica anuala','Imediat ce s-a produs evenimentul exceptional, nu la data evaluarii','La sfarsitul lunii in care s-a produs incidentul','Numai daca incidentul este negativ, nu si pentru cele pozitive'],c:1,e:'Suportul de curs subliniaza ca la producerea unui incident critic (performanta deosebita sau absentă nemotivata), managerul are datoria sa ia contact cu salariatul pentru a-l felicita sau a stabili cauzele. In niciun caz nu trebuie sa astepte pana la data la care se face evaluarea periodica.'},
+  {q:'Eroarea tendintei centrale in evaluare se manifesta prin:',o:['Evaluatorii acorda calificative extreme (foarte bun sau foarte slab) pentru toti angajatii','Evaluatorii acorda calificative medii tuturor angajatilor, evitand extremele','Evaluarea se bazeaza pe evenimentele recente, ignorand performanta anterioara','Evaluatorul compara angajatii cu colegii, nu cu standardele postului'],c:1,e:'Eroarea tendintei centrale este determinata de tendinta unor manageri de a evalua cu calificative de mijloc (medii), evitand extremele. Aceasta elimina diferentierea performantelor si face inutila evaluarea ca instrument decizional.'},
+  {q:'Autoevaluarea ca metoda de evaluare este recomandata in special cand:',o:['Angajatul are performante excelente si poate fi obiectiv','Angajatul lucreaza izolat sau are o meserie unica si este singurul indreptatit sa isi evalueze performanta','Managerul nu are timp sa efectueze evaluarea','Organizatia vrea sa economiseasca costurile evaluarii'],c:1,e:'Suportul de curs mentioneaza ca autoevaluarea poate fi aplicata in anumite situatii, una dintre ele fiind: daca un salariat lucreaza izolat sau are o meserie unica, el este singurul indreptatit sa isi evalueze performanta. Metoda este un instrument de autodepasire, prin care angajatii isi depisteza punctele tari si slabe.'},
+  {q:'Care este principalul avantaj al evaluatorilor externi fata de cei interni?',o:['Cunosc mai bine specificul posturilor din organizatie','Obiectivitatea aprecierilor datorata lipsei oricarei dependente ierarhice','Sunt mai rapizi in elaborarea rapoartelor de evaluare','Costul mai redus comparativ cu evaluatorii interni'],c:1,e:'Suportul de curs precizeaza ca avantajele evaluarii de catre persoane externe consta in obiectivitatea aprecierilor: lipsa oricarei dependente ierarhice face ca evaluarile sa fie cat mai corecte. Dezavantajele: pot sa nu cunoasca toate elementele importante ale organizatiei si sunt costisitori si consuma timp.'},
+  {q:'Distribuirea fortata ca metoda de evaluare comparativa porneste de la premisa ca:',o:['Toti angajatii dintr-o echipa performanta trebuie sa primeasca calificative bune','Angajatii pot fi distribuiti pe niveluri de performanta care verifica distributia normala (Gauss)','Angajatii trebuie ierarhizati exclusiv in functie de un singur criteriu cantitativ','Performanta este distribuita egal intre toti membrii echipei'],c:1,e:'Compararea prin distribuire fortata porneste de la premisa ca pot fi identificati salariatii corespunzatori diferitelor niveluri de performanta (de exemplu 5 niveluri) care sa verifice distributia normala (Gauss). Suportul de curs noteaza ca aceasta distributie nu poate constitui un standard valabil pentru oricare unitate.'},
+  {q:'Evaluarea performantelor trebuie sa fie preponderent pozitiva si constructiva. Ce inseamna aceasta in practica?',o:['Evaluatorul trebuie sa ascunda aspectele negative pentru a nu demotiva angajatul','Evaluatorul trebuie sa formuleze intai o apreciere pozitiva, sa evidentieze problemele intr-un mod constructiv si sa fie orientat spre masuri de imbunatatire viitoare','Evaluarea trebuie sa includa mai multe criterii pozitive decat negative','Calificativul final trebuie sa fie intotdeauna mai bun decat cel anterior'],c:1,e:'Suportul de curs ofera un exemplu concret: daca nu esti multumit de un raport, formuleaza intai o apreciere pozitiva, apoi evidentiezi erorile constructiv. Caracterul constructiv se refera si la potentialele masuri pe care organizatia si angajatul le au la dispozitie pentru a corecta disfunctionalitatile. Evaluarea trebuie orientata spre viitor, nu spre trecet.'},
+  {q:'Standarde de performanta neclare genereaza erori de evaluare deoarece:',o:['Evaluatorii nu au timp sa le interpreteze corect','Indicatorii greu de definit sau formulati ambiguu permit interpretari diferite ale aceluiasi criteriu','Standardele neclare favorizeaza angajatii cu experienta mai mare','Evaluatorii prefera standardele cantitative si ignora cele calitative neclare'],c:1,e:'Suportul de curs subliniaza ca standardele de performanta neclare apar cand aspectele evaluate nu pot fi cuantificate sau formalizate, si criteriile formulate ambiguu (activitate buna, rezultat superior) permit interpretari diferite. Este sarcina specialistilor sa gaseasca formule precise, lipsite de ambiguitate, pentru documentele de evaluare.'},
+  {q:'Care este diferenta esentiala intre eroarea din indulgenta si eroarea de severitate?',o:['Indulgenta supraevalueaza; severitatea subevalueaza; ambele distorsioneaza distributia normala a performantelor','Indulgenta se aplica angajatilor valorosi; severitatea celor slabi','Indulgenta apare la evaluatori noi; severitatea la cei cu experienta','Nu exista diferenta practica intre cele doua tipuri de erori'],c:0,e:'Suportul de curs identifica eroarea din indulgenta si eroarea de severitate ca manifestari opuse ale aceluiasi fenomen: evaluatorii prost selectati sau inadecvat pregatiti tind fie sa supraevalueze (indulgenta), fie sa subevalueze (severitate) angajatii. In ambele cazuri, distributia normala a angajatilor privind performanta va fi eronata.'},
+  {q:'Care este distinctia intre evaluarile cantitative si cele calitative dupa criteriile folosite?',o:['Evaluarile cantitative folosesc cifre; cele calitative folosesc interviuri','Evaluarile cantitative au la baza criterii ca cifra de afaceri, profit, numar contracte; cele calitative au la baza criterii ca abilitati de lider, capacitate de analiza, atitudine','Evaluarile cantitative sunt formale; cele calitative sunt informale','Evaluarile cantitative se aplica angajatilor de executie; cele calitative managerilor'],c:1,e:'Suportul de curs distinge clar: evaluarile cantitative au la baza criterii cantitative (cifra de afaceri, profitul, numarul de contracte, rata absenteismului, numarul de candidati), iar evaluarile calitative au la baza criterii calitative (abilitati de lider, capacitate de sinteza si analiza, atitudine, abilitati de comunicare, dinamism, rigurozitate).'},
+  {q:'Eseul scris ca metoda de evaluare se deosebeste de alte metode prin aceea ca:',o:['Evaluatorul prezinta in scris aprecierea sa despre angajat','Angajatul insusi elaboreaza prezentarea realizarilor, neimplinirilor si disfunctionalitatilor, fara ca seful sa intervina in continut','Este o metoda formalizata cu criterii prestabilite si scale de evaluare','Se bazeaza pe compararea angajatilor intre ei'],c:1,e:'Eseul scris consta in elaborarea de catre titularul postului a prezentarii in scris a realizarilor, neimplinirilor si disfunctionalitatilor. Salariatul poate beneficia de asistenta sefului direct numai pentru structura materialului; seful nu poate interveni in relatarea faptelor. Eseul nefiind formalizat, permite managerilor sa surprinda aspecte necunoscute sau cunoscute eronat.'}
+];
+
+var COD_TRAIN='aplicatii2026';var COD_EXAM='exam2024';
+var MAX_TRAIN=7;var MAX_EXAM=5;
+
+var ST={done:{concepte:false,metode:false,erori:false,quiz:false},student:{n:'',g:''},seed:0,modAcces:'',sel:{concepte:[],metode:[],erori:[],quiz:[]},scores:{concepte:0,metode:0,erori:0,quiz:0},progress:{concepte:0,metode:0,erori:0,quiz:0},answers:{concepte:[],metode:[],erori:[],quiz:[]},shuffled:{}};
+
+function mkRng(s){var seed=s;return function(){seed=(seed*1664525+1013904223)&0xffffffff;return(seed>>>0)/0xffffffff;};}
+function shuffle(arr,r){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(r()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pickN(pool,n,r){var idx=[];for(var i=0;i<pool.length;i++)idx.push(i);return shuffle(idx,r).slice(0,n);}
+function mkSeed(n,g){var h=0,s=n+g+Date.now().toString().slice(-4);for(var i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return Math.abs(h);}
+
+function buildSelections(seed){var r=mkRng(seed);ST.sel.concepte=pickN(PCONCEPTE,6,r);ST.sel.metode=pickN(PMETODE,6,r);ST.sel.erori=pickN(PERORI,4,r);ST.sel.quiz=pickN(PQUIZ,8,r);}
+function getPool(s){if(s==='concepte')return PCONCEPTE;if(s==='metode')return PMETODE;if(s==='erori')return PERORI;return PQUIZ;}
+
+function renderSection(secId,idx){
+  var pool=getPool(secId);var selArr=ST.sel[secId];var n=selArr.length;
+  var nfMap={concepte:'nextConcepte',metode:'nextMetode',erori:'nextErori',quiz:'nextQuiz'};
+  var nextFn=nfMap[secId];
+  var dotsEl=document.getElementById(secId+'Dots');var qEl=document.getElementById(secId+'Q');
+  var dotsHtml='';for(var i=0;i<n;i++){var cl='pdot';if(i<idx)cl+=(ST.answers[secId][i]===true?' c':' w');else if(i===idx)cl+=' cur';dotsHtml+='<div class="'+cl+'"></div>';}
+  dotsEl.innerHTML=dotsHtml;
+  if(idx>=n){showSectionScore(secId);qEl.innerHTML='';return;}
+  var q=pool[selArr[idx]];var L=['A','B','C','D'];
+  var optIdx=[0,1,2,3].slice(0,q.o.length);var sr=mkRng(ST.seed+selArr[idx]*100+idx);
+  for(var si=optIdx.length-1;si>0;si--){var sj=Math.floor(sr()*(si+1));var st=optIdx[si];optIdx[si]=optIdx[sj];optIdx[sj]=st;}
+  if(!ST.shuffled[secId])ST.shuffled[secId]={};ST.shuffled[secId][idx]=optIdx;
+  var optsHtml='';for(var j=0;j<optIdx.length;j++)optsHtml+='<button class="sopt" onclick="answerQ(\''+secId+'\','+idx+','+j+')"><span class="sopt-letter">'+L[j]+'</span>'+q.o[optIdx[j]]+'</button>';
+  var ctx=q.ctx?('<div class="scen-ctx">'+q.ctx+'</div>'):'';var isLast=idx===n-1;
+  qEl.innerHTML='<div class="scen-card"><div class="scen-tag">'+(q.tip||'Scenariu')+'</div><div class="scen-q">'+q.q+'</div>'+ctx+'<div class="scen-opts" id="opts-'+secId+'">'+optsHtml+'</div><div class="scen-fb" id="fb-'+secId+'"></div><div id="nxt-'+secId+'" style="display:none;text-align:right;margin-top:16px">'+(!isLast?'<button class="btnpri" onclick="'+nextFn+'('+(idx+1)+')">Urmatorul &rarr;</button>':'<button class="btnpri" onclick="showSectionScore(\''+secId+'\')">Vezi scorul &rarr;</button>')+'</div></div>';
+}
+
+function answerQ(secId,idx,chosen){
+  var pool=getPool(secId);var selArr=ST.sel[secId];var q=pool[selArr[idx]];
+  var optIdx=(ST.shuffled[secId]&&ST.shuffled[secId][idx])||[0,1,2,3];
+  var chosenOrig=optIdx[chosen];var ok=(chosenOrig===q.c);
+  ST.answers[secId][idx]=ok;if(ok)ST.scores[secId]++;ST.progress[secId]=idx+1;
+  var correctDisplay=optIdx.indexOf(q.c);
+  var btns=document.querySelectorAll('#opts-'+secId+' .sopt');
+  for(var i=0;i<btns.length;i++){btns[i].disabled=true;btns[i].style.cursor='default';if(i===correctDisplay)btns[i].classList.add('correct');else if(i===chosen&&!ok)btns[i].classList.add('wrong');}
+  var fb=document.getElementById('fb-'+secId);fb.className='scen-fb show '+(ok?'fb-correct':'fb-wrong');fb.innerHTML='<strong>'+(ok?'&#10003; Corect!':'&#10007; Incorect.')+'</strong> '+q.e;
+  document.getElementById('nxt-'+secId).style.display='block';
+  var dots=document.getElementById(secId+'Dots').querySelectorAll('.pdot');if(dots[idx])dots[idx].className='pdot '+(ok?'c':'w');
+  updateNavScore(secId);localStorage.setItem('mru4_st',JSON.stringify(ST));
+}
+
+function nextConcepte(i){renderSection('concepte',i);}
+function nextMetode(i){renderSection('metode',i);}
+function nextErori(i){renderSection('erori',i);}
+function nextQuiz(i){renderSection('quiz',i);}
+
+function updateNavScore(secId){var el=document.getElementById('nav-'+secId);if(!el)return;var existing=el.querySelector('.nscore');var maxMap={concepte:6,metode:6,erori:4,quiz:8};var pr=ST.progress[secId];if(pr>0){if(!existing){var sp=document.createElement('span');sp.className='nscore';el.appendChild(sp);existing=sp;}existing.textContent=ST.scores[secId]+'/'+pr;}}
+
+function showSectionScore(secId){
+  var maxMap={concepte:6,metode:6,erori:4,quiz:8};var mx=maxMap[secId]||8;var sc=ST.scores[secId];
+  var el=document.getElementById(secId+'Score');if(!el)return;el.style.display='flex';
+  document.getElementById(secId+'Snum').textContent=sc;
+  var pct=sc/mx;var labels=['Reia sectiunea si revizuieste teoria.','Partial corect. Reia conceptele cheie.','Bine! Intelegi conceptele principale.','Foarte bine!','Excelent!'];
+  var tl=['Sub 50%','50-60%','60-75%','75-90%','90-100%'];var i=pct<0.5?0:pct<0.625?1:pct<0.75?2:pct<0.9?3:4;
+  document.getElementById(secId+'Slab').textContent=sc+' / '+mx+' corecte ('+tl[i]+')';document.getElementById(secId+'Stxt').textContent=labels[i];
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function show(id){var ss=document.querySelectorAll('.section');for(var i=0;i<ss.length;i++)ss[i].classList.remove('visible');var ns=document.querySelectorAll('.ni');for(var i=0;i<ns.length;i++)ns[i].classList.remove('active');document.getElementById('section-'+id).classList.add('visible');document.getElementById('nav-'+id).classList.add('active');if(id==='predare')buildPredare();}
+function done(id){ST.done[id]=true;document.getElementById('nav-'+id).classList.add('done');updProg();localStorage.setItem('mru4_st',JSON.stringify(ST));}
+function updProg(){var c=0;var k=Object.keys(ST.done);for(var i=0;i<k.length;i++)if(ST.done[k[i]])c++;document.getElementById('progTxt').textContent=c+' / 4';document.getElementById('pbfill').style.width=(c/4*100)+'%';}
+
+function buildPredare(){
+  var items=[{id:'concepte',label:'Concepte si obiective',mx:6},{id:'metode',label:'Metode de evaluare',mx:6},{id:'erori',label:'Erori in evaluare',mx:4},{id:'quiz',label:'Autoevaluare',mx:8}];
+  var sumHtml='';
+  for(var i=0;i<items.length;i++){var sc=ST.scores[items[i].id];var mx=items[i].mx;var pct=mx>0?sc/mx:0;var col=pct>=0.75?'var(--green)':pct>=0.5?'var(--gold)':'var(--red)';sumHtml+='<div class="ss-card"><div class="ss-num" style="color:'+col+'">'+sc+'/'+mx+'</div><div class="ss-label">'+items[i].label+'</div></div>';}
+  var total=ST.scores.concepte+ST.scores.metode+ST.scores.erori+ST.scores.quiz;
+  sumHtml+='<div class="ss-card" style="grid-column:1/-1"><div class="ss-num">'+total+'/24</div><div class="ss-label">Total</div></div>';
+  document.getElementById('scoreSummary').innerHTML=sumHtml;
+  var cl='';for(var i=0;i<items.length;i++){var ok=ST.done[items[i].id];cl+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:'+(ok?'var(--greenbg)':'var(--surface2)')+';border-radius:var(--r);border-left:3px solid '+(ok?'var(--green)':'var(--border)')+';margin-bottom:8px"><span>'+(ok?'&#10003;':'&#9675;')+'</span><span style="font-size:13.5px;color:'+(ok?'var(--green)':'var(--muted)')+'">'+items[i].label+'</span></div>';}
+  document.getElementById('checklist').innerHTML=cl;
+}
+
+async function predaLucrarea(){
+  var btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='Se trimite...';
+  var total=ST.scores.concepte+ST.scores.metode+ST.scores.erori+ST.scores.quiz;
+  var data={modul:4,nume:ST.student.n,grupa:ST.student.g,timestamp:new Date().toISOString(),seed:ST.seed,scor_concepte:ST.scores.concepte,scor_metode:ST.scores.metode,scor_erori:ST.scores.erori,scor_quiz:ST.scores.quiz,scor_total:total,prog_concepte:ST.done.concepte,prog_metode:ST.done.metode,prog_erori:ST.done.erori,prog_quiz:ST.done.quiz,raspunsuri_concepte:JSON.stringify(ST.answers.concepte),raspunsuri_metode:JSON.stringify(ST.answers.metode),raspunsuri_erori:JSON.stringify(ST.answers.erori),raspunsuri_quiz:JSON.stringify(ST.answers.quiz),nota:null,obs:''};
+  if(ST.modAcces)data.mod_acces=ST.modAcces;
+  try{
+    var r=await fetch('https://script.google.com/macros/s/AKfycbwXcTXZi61Hp2hCMQcNsJLipi6LNJLufOkAof0uBLjVoOCAJewesrs4XD_uVa-jfGRy/exec',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+    if(!r.ok)throw new Error(await r.text());
+    var z=document.getElementById('subZone');z.className='subzone done';
+    var reiaBtn=ST.modAcces==='train'?'<button class="subbtn" style="margin-top:14px;background:var(--navy)" onclick="reiaModul()">&#8635; Reia seminarul</button>':'';
+    z.innerHTML='<div style="font-size:36px;margin-bottom:12px">&#10003;</div><h3 style="color:var(--green)">Raspunsuri trimise!</h3><p>Scorul tau total: <strong>'+total+'/24</strong>. Profesorul va consulta rezultatele.</p>'+reiaBtn;
+  }catch(err){btn.disabled=false;btn.textContent='📤 Trimite raspunsurile';alert('Eroare la trimitere.\n'+err.message);}
+}
+
+function checkCod(){
+  var cod=document.getElementById('inputCod').value.trim();
+  var errEl=document.getElementById('idErrCod');
+  if(cod===COD_TRAIN){
+    ST.modAcces='train';
+    document.getElementById('idStep2Title').textContent='Seminar — Modul 4';
+    document.getElementById('idStep2Desc').textContent='Poti accesa de maxim '+MAX_TRAIN+' ori. Vei primi scenarii diferite la fiecare incercare.';
+    document.getElementById('idStep1').style.display='none';
+    document.getElementById('idStep2').style.display='block';
+  }else if(cod===COD_EXAM){
+    ST.modAcces='exam';
+    document.getElementById('idStep2Title').textContent='Examen — Modul 4';
+    document.getElementById('idStep2Desc').textContent='Ai la dispozitie maxim '+MAX_EXAM+' sustineri. Completeaza cu atentie.';
+    document.getElementById('idStep1').style.display='none';
+    document.getElementById('idStep2').style.display='block';
+  }else{errEl.style.display='block';}
+}
+
+async function checkLimit(n,g,mod){
+  var max=mod==='train'?MAX_TRAIN:MAX_EXAM;
+  try{
+    return {count:0,max:max,ok:true};
+  }catch(e){return {count:0,max:max,ok:true};}
+}
+
+function reiaModul(){
+  ['mru4_id','mru4_seed','mru4_sel','mru4_st','mru4_mod'].forEach(function(k){localStorage.removeItem(k);});
+  location.reload();
+}
+
+function submitIdentity(){
+  var n=document.getElementById('inputNume').value.trim();
+  var g=document.getElementById('inputGrupa').value.trim();
+  if(!n||!g){document.getElementById('idErr').style.display='block';return;}
+  var btn=document.querySelector('#idStep2 .id-btn');
+  btn.disabled=true;btn.textContent='Se verifica...';
+  checkLimit(n,g,ST.modAcces).then(function(res){
+    btn.disabled=false;btn.textContent='Genereaza setul meu →';
+    if(!res.ok){
+      var errEl=document.getElementById('idErr');
+      errEl.style.display='block';
+      errEl.textContent='Ai atins limita de '+(ST.modAcces==='train'?'seminare':'sustineri')+' ('+res.max+'/'+res.max+'). Contacteaza profesorul.';
+      return;
+    }
+    ST.student={n:n,g:g};
+    var seed=mkSeed(n,g);ST.seed=seed;
+    buildSelections(seed);
+    localStorage.setItem('mru4_id',JSON.stringify({n:n,g:g}));
+    localStorage.setItem('mru4_seed',String(seed));
+    localStorage.setItem('mru4_sel',JSON.stringify(ST.sel));
+    localStorage.setItem('mru4_st',JSON.stringify(ST));
+    localStorage.setItem('mru4_mod',ST.modAcces);
+    var tip=ST.modAcces==='train'?'Antr.'+(res.count+1)+'/'+res.max:'Exam.'+(res.count+1)+'/'+res.max;
+    document.getElementById('hUser').textContent=n+' · '+g+' ('+tip+')';
+    document.getElementById('identifyScreen').classList.remove('show');
+    renderSection('concepte',0);renderSection('metode',0);renderSection('erori',0);renderSection('quiz',0);
+  }).catch(function(e){
+    btn.disabled=false;btn.textContent='Genereaza setul meu →';
+    alert('Eroare: '+e.message);
+  });
+}
+
+(function(){
+  var saved=localStorage.getItem('mru4_id');var savedSel=localStorage.getItem('mru4_sel');var savedSt=localStorage.getItem('mru4_st');var savedSeed=localStorage.getItem('mru4_seed');
+  if(saved&&savedSel&&savedSeed){
+    var id=JSON.parse(saved);ST.student=id;ST.seed=parseInt(savedSeed);var sel=JSON.parse(savedSel);ST.sel=sel;
+    if(savedSt){var st=JSON.parse(savedSt);ST.scores=st.scores||ST.scores;ST.answers=st.answers||ST.answers;ST.done=st.done||ST.done;ST.progress=st.progress||ST.progress;ST.shuffled=st.shuffled||{};}
+    ST.modAcces=localStorage.getItem('mru4_mod')||'exam';
+    document.getElementById('hUser').textContent=id.n+' · '+id.g;
+    var dkeys=Object.keys(ST.done);for(var i=0;i<dkeys.length;i++)if(ST.done[dkeys[i]])document.getElementById('nav-'+dkeys[i])?.classList.add('done');
+    updProg();
+    var sections=['concepte','metode','erori','quiz'];
+    for(var s=0;s<sections.length;s++){var sec=sections[s];var prog=ST.progress[sec]||0;if(prog>=ST.sel[sec].length){renderSection(sec,ST.sel[sec].length);showSectionScore(sec);}else{renderSection(sec,prog);}updateNavScore(sec);}
+    document.getElementById('loadingScreen').style.display='none';
+  }else{document.getElementById('loadingScreen').style.display='none';document.getElementById('identifyScreen').classList.add('show');}
+})();
+</script>
+</body>
+</html>

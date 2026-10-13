@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplicatii MRU - Modul 1</title>
+<style>
+:root {
+  --bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#ddd9d0;
+  --navy:#1a3a5c;--navy2:#264d75;--gold:#b8892a;--goldl:#e8c87a;
+  --text:#1c1c1c;--muted:#6b6560;--light:#9a948e;
+  --green:#2d6a4f;--greenbg:#eaf4ef;--red:#8b2635;--redbg:#fdf0f0;
+  --purple:#4a2d7a;--purplebg:#f0ecf8;--r:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.65;min-height:100vh}
+
+.overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center}
+#loadingScreen{background:var(--navy);flex-direction:column;color:#fff}
+#loadingScreen h2{font-size:22px;font-weight:700;margin-bottom:8px}
+#loadingScreen p{font-size:13px;opacity:.7}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#identifyScreen{background:rgba(0,0,0,.7);display:none}
+#identifyScreen.show{display:flex}
+.id-box{background:#fff;border-radius:12px;padding:36px 40px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.id-box h2{font-size:20px;color:var(--navy);margin-bottom:6px;font-weight:700}
+.id-box p{font-size:13px;color:var(--muted);margin-bottom:24px}
+.id-label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.id-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;margin-bottom:16px;background:var(--bg);font-family:inherit}
+.id-input:focus{outline:none;border-color:var(--navy);background:#fff}
+.id-btn{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.id-btn:hover{background:var(--navy2)}
+.id-err{font-size:12px;color:var(--red);margin-top:8px;display:none}
+
+header{background:var(--navy);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.hbadge{background:var(--gold);font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 7px;border-radius:3px;flex-shrink:0}
+.htitle{font-size:13px;opacity:.9;margin-left:14px}
+.huser{font-size:12px;opacity:.8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hprog{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);padding:5px 12px;border-radius:20px;font-size:12px;white-space:nowrap}
+.pbmini{width:60px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
+.pbfill{height:100%;background:var(--goldl);border-radius:2px;transition:width .4s}
+
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 56px)}
+nav{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.nlabel{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--light);padding:0 20px 8px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;border-left:3px solid transparent;font-size:13.5px;color:var(--muted);transition:all .15s}
+.ni:hover{background:var(--surface2);color:var(--text)}
+.ni.active{border-left-color:var(--navy);background:#eef3f8;color:var(--navy);font-weight:600}
+.ni.done{color:var(--green)}
+.ni .nscore{margin-left:auto;font-size:11px;background:var(--greenbg);color:var(--green);padding:2px 7px;border-radius:10px;font-weight:700}
+.nicon{font-size:15px;min-width:20px;text-align:center}
+.ndiv{margin:16px 20px;border:none;border-top:1px solid var(--border)}
+
+main{padding:36px 48px;max-width:860px}
+.section{display:none}
+.section.visible{display:block;animation:fi .25s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.shead{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sicon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.ib{background:#e8f0f8}.ia{background:#fdf4e3}.ig{background:#e8f4ef}.ip{background:#f0ecf8}.ir{background:#fce8ec}
+.sheading{font-size:18px;font-weight:700;color:var(--navy)}
+.sdesc{font-size:13px;color:var(--muted);margin-top:2px}
+
+.icard{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:10px;padding:28px 32px;margin-bottom:24px}
+.icard h2{font-size:22px;font-weight:700;margin-bottom:10px;line-height:1.3}
+.icard p{font-size:14px;opacity:.85;max-width:560px;line-height:1.7}
+.otags{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+.otag{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500}
+
+/* THEORY BOX */
+.thbox{border-radius:var(--r);padding:20px 24px;margin-bottom:20px;border:1px solid var(--border)}
+.th-navy{background:#eef3f8;border-left:5px solid var(--navy)}
+.th-gold{background:#fdf7ec;border-left:5px solid var(--gold)}
+.th-green{background:var(--greenbg);border-left:5px solid var(--green)}
+.th-purple{background:var(--purplebg);border-left:5px solid var(--purple)}
+.th-red{background:var(--redbg);border-left:5px solid var(--red)}
+.thtag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;opacity:.7}
+.thbox h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.thbox p{font-size:13.5px;line-height:1.75;margin-bottom:8px}
+.thbox p:last-child{margin-bottom:0}
+.thbox ul{padding-left:20px;font-size:13.5px;line-height:1.75}
+.thbox ul li{margin-bottom:6px}
+.thbox strong{font-weight:700}
+
+.th2col{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:20px}
+.th2col-hd{padding:10px 16px;font-size:12px;font-weight:700;color:#fff;text-align:center}
+.th2col-bd{padding:10px 14px;font-size:13px;line-height:1.6;border-right:1px solid var(--border);border-top:1px solid var(--border)}
+.th2col-bd:nth-child(2n){border-right:none}
+.th2col-bd ul{padding-left:16px}
+.th2col-bd ul li{margin-bottom:4px}
+
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+
+/* SCENARIO CARD */
+.scen-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.scen-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);margin-bottom:8px}
+.scen-q{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px;line-height:1.5}
+.scen-ctx{font-size:13px;color:var(--muted);margin-bottom:18px;font-style:italic}
+.scen-opts{display:flex;flex-direction:column;gap:9px}
+.sopt{display:flex;align-items:flex-start;gap:11px;padding:12px 16px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;background:var(--bg);text-align:left;font-size:13.5px;font-family:inherit;line-height:1.5;width:100%;transition:all .15s}
+.sopt:hover{border-color:var(--navy);background:#eef3f8}
+.sopt.correct{border-color:var(--green);background:var(--greenbg);color:var(--green)}
+.sopt.wrong{border-color:var(--red);background:var(--redbg);color:var(--red)}
+.sopt.partial{border-color:var(--gold);background:#fdf7ec;color:#7a5800}
+.sopt-letter{min-width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-top:1px}
+.scen-fb{margin-top:14px;padding:14px 16px;border-radius:var(--r);font-size:13.5px;line-height:1.65;display:none}
+.scen-fb.show{display:block}
+.fb-correct{background:var(--greenbg);color:var(--green);border-left:4px solid var(--green)}
+.fb-wrong{background:var(--redbg);color:var(--red);border-left:4px solid var(--red)}
+.fb-partial{background:#fdf7ec;color:#7a5800;border-left:4px solid var(--gold)}
+
+.prog-dots{display:flex;gap:5px;margin-bottom:18px}
+.pdot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:background .2s}
+.pdot.c{background:var(--green)}.pdot.w{background:var(--red)}.pdot.cur{background:var(--navy)}
+
+.scorebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 24px;margin-top:20px;display:flex;align-items:center;gap:20px}
+.scirc{width:60px;height:60px;border-radius:50%;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.snum{font-size:20px;font-weight:700}.sden{font-size:10px;opacity:.7}
+
+.snav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.btnpri{padding:10px 22px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s}
+.btnpri:hover{background:var(--navy2)}
+.btnsec{padding:10px 18px;border:1px solid var(--border);background:#fff;border-radius:var(--r);font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s}
+.btnsec:hover{border-color:var(--navy);color:var(--navy)}
+
+.subzone{background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;margin-top:24px}
+.subzone.done{border-color:var(--green);background:var(--greenbg)}
+.subzone h3{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:8px}
+.subzone p{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+.subbtn{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:13px 32px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s}
+.subbtn:hover{background:#235a40}
+.subbtn:disabled{opacity:.5;cursor:default}
+
+.score-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.ss-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center}
+.ss-num{font-size:22px;font-weight:700;color:var(--navy)}
+.ss-label{font-size:11px;color:var(--muted);margin-top:3px}
+
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  nav{position:static;height:auto;display:flex;gap:4px;padding:12px;overflow-x:auto;flex-direction:row;border-right:none;border-bottom:1px solid var(--border)}
+  .nlabel,.ndiv{display:none}
+  .ni{padding:7px 12px;border-left:none;border-bottom:2px solid transparent;white-space:nowrap;border-radius:4px}
+  .ni.active{border-bottom-color:var(--navy);background:#eef3f8}
+  .ni .nscore{display:none}
+  main{padding:20px 16px}
+  .th2col{grid-template-columns:1fr}
+  .score-summary{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="overlay" style="display:flex;flex-direction:column">
+  <div class="spinner"></div>
+  <h2>Aplicatii MRU</h2>
+  <p>Se pregatesc scenariile tale...</p>
+</div>
+
+<div id="identifyScreen" class="overlay">
+  <div class="id-box">
+    <div id="idStep1">
+      <h2>Acces Modul 1</h2>
+      <p>Introdu codul de acces primit de la profesor.</p>
+      <label class="id-label">Cod de acces</label>
+      <input type="password" id="inputCod" class="id-input" placeholder="Cod de acces">
+      <button class="id-btn" onclick="checkCod()">Continua &rarr;</button>
+      <div class="id-err" id="idErrCod">Cod incorect.</div>
+    </div>
+    <div id="idStep2" style="display:none">
+      <h2 id="idStep2Title">Identificare student</h2>
+      <p id="idStep2Desc">Completeaza datele. Vei primi un set unic de scenarii.</p>
+      <label class="id-label">Nume si prenume</label>
+      <input type="text" id="inputNume" class="id-input" placeholder="ex: Ionescu Alexandru">
+      <label class="id-label">Grupa</label>
+      <input type="text" id="inputGrupa" class="id-input" placeholder="ex: 571, 581">
+      <button class="id-btn" onclick="submitIdentity()">Genereaza setul meu &rarr;</button>
+      <div class="id-err" id="idErr">Te rog completeaza toate campurile.</div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div style="display:flex;align-items:center;overflow:hidden">
+    <span class="hbadge">AN</span>
+    <span class="htitle">MRU &middot; Modulul 1 &middot; Comportament Organizational</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="huser" id="hUser"></span>
+    <div class="hprog"><span id="progTxt">0 / 5</span><div class="pbmini"><div class="pbfill" id="pbfill" style="width:0%"></div></div></div>
+  </div>
+</header>
+
+<div class="layout">
+<nav>
+  <div class="nlabel">Activitati</div>
+  <div class="ni active" onclick="show('intro')" id="nav-intro"><span class="nicon">📋</span> Introducere</div>
+  <div class="ni" onclick="show('motiv')" id="nav-motiv"><span class="nicon">🧩</span> Teorii motivatie</div>
+  <div class="ni" onclick="show('cultura')" id="nav-cultura"><span class="nicon">🌐</span> Cultura org.</div>
+  <div class="ni" onclick="show('hofstede')" id="nav-hofstede"><span class="nicon">🎯</span> Joc Hofstede</div>
+  <div class="ni" onclick="show('quiz')" id="nav-quiz"><span class="nicon">🧠</span> Autoevaluare</div>
+  <hr class="ndiv">
+  <div class="ni" onclick="show('predare')" id="nav-predare"><span class="nicon">📤</span> Trimite raspunsurile</div>
+</nav>
+
+<main>
+
+<!-- INTRO -->
+<div class="section visible" id="section-intro">
+  <div class="icard">
+    <h2>Comportament organizational</h2>
+    <p>Modulul acopera Capitolul 2 din suportul de curs: teoriile motivatiei, cultura organizationala si dimensiunile Hofstede. Fiecare student primeste un set unic de scenarii randomizate.</p>
+    <div class="otags"><span class="otag">Motivatie</span><span class="otag">Cultura organizationala</span><span class="otag">Dimensiunile Hofstede</span><span class="otag">Scenarii interactive</span></div>
+  </div>
+  <div class="pcard">
+    <div style="font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Structura aplicatiei</div>
+    <div style="font-size:14px;line-height:1.8">
+      <p style="margin-bottom:8px">&#9312; <strong>Teorii ale motivatiei</strong> &mdash; 8 scenarii (cate 2 per teorie): Maslow, Herzberg, X&amp;Y, Echitate. Alegi raspunsul corect cu feedback imediat.</p>
+      <p style="margin-bottom:8px">&#9313; <strong>Cultura organizationala</strong> &mdash; 4 scenarii de analiza: elemente culturale si dimensiuni Hofstede aplicate.</p>
+      <p style="margin-bottom:8px">&#9314; <strong>Jocul Hofstede</strong> &mdash; 8 scenarii de clasificat pe dimensiunile culturale ale lui Hofstede.</p>
+      <p style="margin-bottom:8px">&#9315; <strong>Test de autoevaluare</strong> &mdash; 8 intrebari teoretice din materia capitolului.</p>
+      <p>&#9316; <strong>Trimitere</strong> &mdash; scorurile si raspunsurile se trimit direct profesorului.</p>
+    </div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="show('motiv')">Incepe &rarr;</button></div>
+</div>
+
+<!-- MOTIVATIE -->
+<div class="section" id="section-motiv">
+  <div class="shead"><div class="sicon ib">🧩</div><div><div class="sheading">Teorii ale motivatiei</div><div class="sdesc">Teorie si 8 scenarii de aplicare</div></div></div>
+
+  <div class="thbox th-gold">
+    <div class="thtag">Teoria lui Maslow</div>
+    <h3>Ierarhia nevoilor</h3>
+    <p>Maslow propune ca nevoile umane sunt organizate intr-o ierarhie de 5 niveluri. Un nivel superior <strong>nu motiveaza</strong> pana cand nivelul inferior nu este satisfacut. Managerul HR eficient identifica la ce nivel se afla angajatul si intervine corespunzator.</p>
+    <ul>
+      <li><strong>Nevoi fiziologice</strong> &mdash; salariu decent, conditii fizice de munca, pauze, temperatura</li>
+      <li><strong>Nevoi de securitate</strong> &mdash; contract stabil, siguranta locului de munca, protectie impotriva abuzului</li>
+      <li><strong>Nevoi sociale / afiliere</strong> &mdash; relatii bune cu colegii, sentiment de echipa, acceptare sociala</li>
+      <li><strong>Nevoi de stima</strong> &mdash; recunoastere publica, titluri, feedback pozitiv, promovare</li>
+      <li><strong>Nevoi de implinire</strong> &mdash; autonomie, proiecte provocatoare, creativitate, crestere profesionala</li>
+    </ul>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)">Critica principala: ierarhia nu este universala &mdash; ordinea nevoilor variaza cultural si individual.</p>
+  </div>
+
+  <div class="thbox th-green">
+    <div class="thtag">Teoria lui Herzberg &mdash; Cei doi factori</div>
+    <h3>Factori de igiena vs. Factori motivatori</h3>
+    <p>Herzberg a descoperit ca satisfactia si insatisfactia la locul de munca nu sunt doua extreme ale aceluiasi continuum &mdash; sunt determinate de <strong>factori diferiti</strong>.</p>
+    <div class="th2col" style="margin-top:12px;margin-bottom:0">
+      <div class="th2col-hd" style="background:var(--red)">Factori de igiena (daca lipsesc = insatisfactie)</div>
+      <div class="th2col-hd" style="background:var(--green)">Factori motivatori (daca exista = satisfactie)</div>
+      <div class="th2col-bd"><ul><li>Politica si administratia firmei</li><li>Salariul si beneficiile</li><li>Conditiile de munca</li><li>Relatia cu superiorul</li><li>Siguranta locului de munca</li></ul></div>
+      <div class="th2col-bd"><ul><li>Realizarea si implinirea</li><li>Recunoasterea performantei</li><li>Munca in sine (continut)</li><li>Responsabilitatea</li><li>Avansarea si cresterea</li></ul></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)">Implicatie cheie pentru HR: a creste salariul elimina insatisfactia, dar nu produce motivatie. Motivatia vine din continut, nu din context.</p>
+  </div>
+
+  <div class="thbox th-purple">
+    <div class="thtag">Teoria X si Y &mdash; McGregor</div>
+    <h3>Convingerile managerului despre natura angajatilor</h3>
+    <p>McGregor nu descrie tipuri de angajati, ci <strong>tipuri de manageri</strong>. Convingerile unui manager despre angajati determina stilul de conducere, care la randul lui genereaza comportamentele prezise &mdash; auto-profetie.</p>
+    <div class="th2col" style="margin-top:12px;margin-bottom:0">
+      <div class="th2col-hd" style="background:#5a3a8a">Teoria X &mdash; managerul crede ca...</div>
+      <div class="th2col-hd" style="background:var(--navy)">Teoria Y &mdash; managerul crede ca...</div>
+      <div class="th2col-bd"><ul><li>Angajatul evita munca prin natura sa</li><li>Trebuie controlat si directionat permanent</li><li>Prefera sa fie condus, fara responsabilitate</li><li>Rezista schimbarii</li><li>&rarr; Management autoritar, control strict</li></ul></div>
+      <div class="th2col-bd"><ul><li>Munca e la fel de fireasca ca odihna</li><li>Angajatul se auto-controleaza daca e motivat</li><li>Cauta si accepta responsabilitate</li><li>Are capacitate de creativitate si inovatie</li><li>&rarr; Management participativ, autonomie</li></ul></div>
+    </div>
+  </div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Teoria echitatii &mdash; Adams</div>
+    <h3>Motivatia prin comparatie sociala</h3>
+    <p>Adams sustine ca angajatii sunt motivati nu de valoarea absoluta a recompensei, ci de <strong>echitatea perceputa</strong>: raportul dintre contributia proprie si recompensa primita, comparat cu acelasi raport al unui coleg de referinta.</p>
+    <p><strong>Inechitate negativa</strong> (eu contribui mai mult dar primesc mai putin): reduce efortul, cere mărire, schimba perceptia, paraseste organizatia.</p>
+    <p><strong>Inechitate pozitiva</strong> (primesc mai mult decat merit): vinovatie, crestere temporara a efortului pentru a justifica recompensa.</p>
+    <p style="margin-top:8px;font-size:13px;color:var(--muted)">Implicatie HR: transparenta sistemului de salarizare si coerenta interna a recompenselor sunt esentiale pentru motivatie.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--navy)">
+    <strong style="color:var(--navy)">8 scenarii &mdash; cate 2 per teorie.</strong> Selecteaza raspunsul cel mai bine argumentat teoretic. Feedback imediat dupa fiecare alegere.
+  </div>
+
+  <div class="prog-dots" id="motivDots"></div>
+  <div id="motivQ"></div>
+  <div class="scorebar" id="motivScore" style="display:none">
+    <div class="scirc"><div class="snum" id="motivSnum">0</div><div class="sden">/ 8</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="motivSlab"></div><div style="font-size:13px;color:var(--muted)" id="motivStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('motiv');show('cultura')">Continua &rarr;</button></div>
+</div>
+
+<!-- CULTURA -->
+<div class="section" id="section-cultura">
+  <div class="shead"><div class="sicon ia">🌐</div><div><div class="sheading">Cultura organizationala</div><div class="sdesc">Teorie si 4 scenarii de analiza</div></div></div>
+
+  <div class="thbox th-gold">
+    <div class="thtag">Elementele culturii organizationale</div>
+    <h3>Modelul lui Hofstede &mdash; cele 7 elemente</h3>
+    <p>Cultura organizationala nu este declaratia de misiune &mdash; este suma comportamentelor reale din organizatie. Hofstede identifica 7 elemente care o definesc, de la cele mai vizibile la cele mai profunde:</p>
+    <ul>
+      <li><strong>A. Practicile</strong> &mdash; felul in care se fac lucrurile zi de zi. Cel mai greu de schimbat deoarece implica toti membrii.</li>
+      <li><strong>B. Ritualurile</strong> &mdash; activitati colective aparent irationale dar cu valoare sociala: sedintele de luni, petrecerile de Craciun, ceremoniile de premiere.</li>
+      <li><strong>C. Povestile si eroii</strong> &mdash; naratiunile despre fondatori, succese, crize depasiteare. Definesc ce comportamente sunt valorizate.</li>
+      <li><strong>D. Simbolurile</strong> &mdash; limbajul intern, titlurile, birourile, hainele, insemnele. Reflecta ierarhia si valorile.</li>
+      <li><strong>E. Sistemele de control</strong> &mdash; ce se masoara, ce se recompenseaza, ce se sanctioneaza. Arata ce conteaza cu adevarat.</li>
+      <li><strong>F. Structura puterii</strong> &mdash; grupurile care detin influenta reala, nu neaparat cea formala.</li>
+      <li><strong>G. Structura formala</strong> &mdash; organigrama si ierarhia care delimiteaza rolurile si responsabilitatile.</li>
+    </ul>
+  </div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Dimensiunile nationale &mdash; Hofstede</div>
+    <h3>Cum difera culturile nationale in context organizational</h3>
+    <p>Pe baza unui studiu pe 100.000 de angajati IBM din 53 de tari, Hofstede a identificat 5 dimensiuni care explica diferentele de comportament organizational intre culturi:</p>
+    <ul>
+      <li><strong>Distanta fata de putere (PDI)</strong> &mdash; gradul in care membrii mai putin puternici accepta inegalitatea. Romania: scor ridicat (distanta mare).</li>
+      <li><strong>Individualism / Colectivism (IDV)</strong> &mdash; gradul in care indivizii sunt integrati in grupuri. Romania: scor mediu-colectivist.</li>
+      <li><strong>Masculinitate / Feminitate (MAS)</strong> &mdash; competitie si castig material vs. cooperare si calitatea vietii. Nu se refera la gen.</li>
+      <li><strong>Evitarea incertitudinii (UAI)</strong> &mdash; toleranta culturii fata de ambiguitate si necunoscut. Romania: scor ridicat (evitare mare).</li>
+      <li><strong>Orientare termen lung / scurt (LTO)</strong> &mdash; perseverenta si economisire vs. traditie si rezultate rapide.</li>
+    </ul>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)">Dimensiunile nu sunt judecati de valoare &mdash; nu exista culturi superioare. Ele explica comportamente si ajuta la gestionarea echipelor multiculturale.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--gold)">
+    <strong style="color:var(--navy)">4 scenarii &mdash; 2 despre elementele culturii, 2 despre dimensiunile Hofstede.</strong> Identifica raspunsul cel mai bine argumentat.
+  </div>
+
+  <div class="prog-dots" id="culturaDots"></div>
+  <div id="culturaQ"></div>
+  <div class="scorebar" id="culturaScore" style="display:none">
+    <div class="scirc"><div class="snum" id="culturaSnum">0</div><div class="sden">/ 4</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="culturaSlab"></div><div style="font-size:13px;color:var(--muted)" id="culturaStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('cultura');show('hofstede')">Continua &rarr;</button></div>
+</div>
+
+<!-- HOFSTEDE -->
+<div class="section" id="section-hofstede">
+  <div class="shead"><div class="sicon ip">🎯</div><div><div class="sheading">Jocul Hofstede</div><div class="sdesc">8 scenarii de clasificat pe dimensiunile culturale</div></div></div>
+
+  <div class="thbox th-purple" style="margin-bottom:20px">
+    <div class="thtag">Ghid rapid</div>
+    <h3>Cum sa identifici dimensiunea Hofstede</h3>
+    <p><strong>Distanta fata de putere mare</strong>: ierarhie acceptata, decizii centralizate, seful nu se contrazice.</p>
+    <p><strong>Colectivism</strong>: grupul primeaza, angajarea si evaluarea tin cont de reteaua sociala, loialitate fata de grup.</p>
+    <p><strong>Masculinitate</strong>: competitie, castig material, performanta individuala, ore suplimentare ca semn de dedicare.</p>
+    <p><strong>Evitarea incertitudinii</strong>: reguli, proceduri, structuri formale, anxietate fata de schimbare sau ambiguitate.</p>
+    <p><strong>Orientare termen lung</strong>: investitii cu beneficii pe termen lung, perseverenta, adaptare la circumstante.</p>
+  </div>
+
+  <div class="prog-dots" id="hofstedeDots"></div>
+  <div id="hofstedeQ"></div>
+  <div class="scorebar" id="hofstedeScore" style="display:none">
+    <div class="scirc"><div class="snum" id="hofstedeSnum">0</div><div class="sden">/ 8</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="hofstedeSlab"></div><div style="font-size:13px;color:var(--muted)" id="hofstedeStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('hofstede');show('quiz')">Continua &rarr;</button></div>
+</div>
+
+<!-- QUIZ -->
+<div class="section" id="section-quiz">
+  <div class="shead"><div class="sicon ig">🧠</div><div><div class="sheading">Test de autoevaluare</div><div class="sdesc">8 intrebari din Capitolul 2 &mdash; Comportament Organizational</div></div></div>
+  <div class="prog-dots" id="quizDots"></div>
+  <div id="quizQ"></div>
+  <div class="scorebar" id="quizScore" style="display:none">
+    <div class="scirc"><div class="snum" id="quizSnum">0</div><div class="sden">/ 8</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="quizSlab"></div><div style="font-size:13px;color:var(--muted)" id="quizStxt"></div></div>
+  </div>
+  <div class="snav"><button class="btnsec" onclick="showSectionScore('quiz')">Vezi scorul</button><button class="btnpri" onclick="done('quiz');show('predare')">Mergi la trimitere &rarr;</button></div>
+</div>
+
+<!-- PREDARE -->
+<div class="section" id="section-predare">
+  <div class="shead"><div class="sicon ig">📤</div><div><div class="sheading">Trimite raspunsurile</div><div class="sdesc">Trimite scorurile si raspunsurile profesorului</div></div></div>
+  <div class="score-summary" id="scoreSummary"></div>
+  <div class="pcard"><div style="font-size:14px;margin-bottom:12px">Progresul tau:</div><div id="checklist"></div></div>
+  <div class="subzone" id="subZone">
+    <h3>Esti pregatit/a?</h3>
+    <p>Scorurile si raspunsurile tale vor fi trimise profesorului.</p>
+    <button class="subbtn" id="subBtn" onclick="predaLucrarea()">📤 Trimite raspunsurile</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+var SUPA_URL='https://aarinakhxzndzuplflgm.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhcmluYWtoeHpuZHp1cGxmbGdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NDU2MzUsImV4cCI6MjEwNjMyMTYzNX0.z-K-iebBaGxyZ6K6iDi0wZReqfgmhMVcmzp7namNxNw';
+
+// ── POOL MOTIVATIE (16 scenarii = 4 teorii x 4 scenarii, vom alege 2 per teorie) ──
+var PMOTIV = [
+  // MASLOW (idx 0-3)
+  {teorie:'Maslow',q:'Un muncitor calificat lucreaza in conditii periculoase si cu un salariu sub nivelul minim decent. Managerul HR ii ofera o diploma de "Angajatul lunii" si il luda public in fata echipei. Muncitorul ramane demotivat. Care este explicatia corecta prin teoria lui Maslow?',
+   o:['Muncitorul nu are nevoie de recunoastere, deci motivatorul ales nu se potriveste personalitatii sale','Nevoile fiziologice si de securitate nesatisfacute blocheaza eficienta oricarui stimulent de nivel superior','Diploma este un simbol prea slab; HR-ul ar fi trebuit sa ofere o promotie','Maslow nu explica aceasta situatie deoarece teoria sa se aplica doar managerilor'],
+   c:1,e:'Conform ierarhiei lui Maslow, nevoile de la baza piramidei (fiziologice, securitate) trebuie satisfacute inainte ca stimulentele superioare (stima, recunoastere) sa aiba efect. Oferirea recunoasterii unui angajat cu nevoi de baza neacoperite este ineficienta. Interventia HR corecta este mai intai imbunatatirea salariului si conditiilor de munca.'},
+  {teorie:'Maslow',q:'O tanara absolventa angajata de 3 luni intr-o companie noua se simte izolata si nu a reusit sa isi faca prieteni la birou. Managerul ii propune un program de training avansat pentru avansare rapida. Ea refuza, desi cariera o intereseaza. Cum explici situatia prin Maslow?',
+   o:['Nevoile sociale nesatisfacute (afiliere, prietenie) blocheaza eficienta stimulentelor de stima sau implinire','Tanara nu este potrivita pentru postul respectiv si HR-ul ar trebui sa considere inlocuirea','Trainingul avansat este perceput ca o amenintare, nu ca o oportunitate','Maslow sustine ca nevoile de implinire sunt mai importante decat cele sociale pentru tineri'],
+   c:0,e:'Nivelul 3 al piramidei lui Maslow (nevoi sociale: afiliere, prietenie, sentiment de apartenenta) este nesatisfacut. Propunerea unui training avansat adreseaza niveluri superioare (stima, implinire) inainte ca cel social sa fie rezolvat. HR-ul ar trebui mai intai sa faciliteze integrarea sociala a angajatei.'},
+  {teorie:'Maslow',q:'Un specialist IT cu salariu excelent si job stabil refuza orice initiativa de inovare sau proiecte provocatoare, preferand sarcini de rutina. Managerul nu intelege lipsa de ambitie. Ce spune Maslow?',
+   o:['Specialistul are un nivel de inteligenta scazut si nu face fata sarcinilor complexe','Nevoile de stima (recunoastere, respectul colegilor) nu sunt inca satisfacute, deci nevoile de implinire nu au activat','Maslow nu se aplica angajatilor IT deoarece natura muncii lor este diferita','Salariul excelent a produs demotivare prin suprasatisfacere financiara'],
+   c:1,e:'Chiar daca nevoile fiziologice si de securitate sunt acoperite, Maslow sustine ca nevoile de stima (recunoastere, respect, statut) trebuie satisfacute inainte de activarea nevoilor de implinire (autonomie, creativitate, provocare). Managerul HR ar trebui sa investigheze daca angajatul primeste suficienta recunoastere si validare profesionala.'},
+  {teorie:'Maslow',q:'O companie ofera angajatilor sali de fitness, mese gratuite si spatii de relaxare. Cu toate acestea, absenteismul creste si angajatii par depresivi. Directorul HR este confuz. Ce perspectiva ofera Maslow?',
+   o:['Beneficiile oferite sunt prea costisitoare si angajatii se simt vinovati ca le folosesc','Beneficiile satisfac nevoi fiziologice dar ignora nevoile de securitate (stabilitate contractuala) sau sociale (relatii la locul de munca)','Maslow sustine ca beneficiile materiale demotiveaza pe termen lung','Compania ar trebui sa elimine beneficiile si sa creasca salariile direct'],
+   c:1,e:'Maslow arata ca satisfacerea unui nivel nu garanteaza motivatia daca un nivel inferior este amenintat. Beneficiile oferite pot satisface nevoi fiziologice, dar daca angajatii au nesiguranta contractuala (nivel 2) sau se simt izolati social (nivel 3), beneficiile nu compenseaza. HR-ul trebuie sa diagnosticheze care nivel specific este problematic.'},
+
+  // HERZBERG (idx 4-7)
+  {teorie:'Herzberg',q:'O firma mareste salariile cu 15%, introduce bonusuri trimestriale si renoveza spatiile de lucru. Dupa 3 luni, productivitatea ramane neschimbata iar unii angajati inca se plang. Directorul de productie cere explicatii HR-ului. Care este raspunsul corect prin teoria lui Herzberg?',
+   o:['Cresterea salariilor a fost insuficienta; ar fi trebuit sa fie de cel putin 30%','Masurile luate sunt factori de igiena care elimina insatisfactia dar nu produc motivatie; lipsesc factorii motivatori','Angajatii sunt nemultumiti de proces, nu de rezultat; comunicarea HR-ului a fost deficitara','Herzberg sustine ca motivatia nu poate fi indusa din exterior, deci nicio masura nu ar fi functionat'],
+   c:1,e:'Conform Herzberg, salariul, bonusurile si conditiile fizice de munca sunt factori de igiena: absenta lor produce insatisfactie, dar prezenta lor nu produce satisfactie activa sau motivatie. Pentru motivatie reala, HR-ul trebuie sa introduca factori motivatori: recunoastere individuala a performantei, atribuire de responsabilitati sporite, oportunitati de avansare, continut interesant al muncii.'},
+  {teorie:'Herzberg',q:'Un programator senior se plange constant de relatia tensionata cu managerul sau direct si de lipsa comunicarii in echipa. HR-ul raspunde oferindu-i un proiect nou si interesant si posibilitate de avansare. Programatorul ramane nemultumit. De ce?',
+   o:['Programatorul nu este potrivit cultural pentru organizatie si ar trebui sa plece','Relatia cu managerul si comunicarea sunt factori de igiena; eliminarea lor este prioritara fata de factorii motivatori','Proiectul oferit nu este suficient de complex pentru nivelul sau','Herzberg recomanda ignorarea nemultumirilor legate de relatii interpersonale'],
+   c:1,e:'Relatia cu superiorul direct si comunicarea in echipa sunt factori de igiena la Herzberg. Atunci cand acesti factori produc insatisfactie activa, ei trebuie rezolvati mai intai. Adaugarea de factori motivatori (proiect nou, avansare) nu compenseaza prezenta factorilor de igiena negativi. HR-ul trebuie sa rezolve mai intai problema relatiei cu managerul.'},
+  {teorie:'Herzberg',q:'Managementul vrea sa motiveze o echipa de vanzari cu performante slabe. Propun: marire salariala, program flexibil si asigurare medicala privata. Consultantul HR recomanda alta abordare. Ce ar sugera Herzberg?',
+   o:['Masurile propuse sunt potrivite; lipsa de motivatie este cauzata de selectia gresita a angajatilor','Masurile propuse sunt factori de igiena; motivatia reala vine din recunoastere, responsabilitate extinsa si provocare profesionala','Herzberg ar recomanda introducerea unui sistem de penalizari pentru performante slabe','Flexibilitatea si asigurarea sunt factori motivatori puternici conform teoriei Herzberg'],
+   c:1,e:'Maririle salariale, programul flexibil si asigurarea medicala sunt factori de igiena: elimina surse de insatisfactie dar nu produc motivatie activa. Herzberg ar recomanda: recunoasterea publica a celor mai buni vanzatori, atribuirea unor conturi importante (responsabilitate), trasarea unui parcurs de avansare clar si imbogatirea continutului muncii cu provocari reale.'},
+  {teorie:'Herzberg',q:'Angajatii unui departament administrative au conditii de munca excelente, salarii competitive si un manager apreciat. Cu toate acestea, absenteismul este ridicat si mai multi spun ca munca li se pare "plictisitoare". Cum interpreteaza Herzberg aceasta situatie?',
+   o:['Factorii de igiena sunt satisfacuti dar factorii motivatori (continut, responsabilitate, realizare) lipsesc','Plictiseala indica burnout si nu poate fi rezolvata prin masuri organizationale','Managementul ar trebui sa introduca sanctiuni mai stricte pentru absente','Herzberg nu acopera situatiile in care factorii de igiena sunt satisfacuti'],
+   c:0,e:'Acesta este un exemplu clasic din teoria lui Herzberg: cand toti factorii de igiena sunt la nivel optim, absenta factorilor motivatori produce neutralitate sau plictiseala, nu satisfactie. HR-ul trebuie sa imbogateasca posturile (job enrichment): variatie a sarcinilor, proiecte cu responsabilitate crescuta, autonomie in luarea deciziilor, feedback direct despre impactul muncii.'},
+
+  // X si Y (idx 8-11)
+  {teorie:'Teoria X si Y',q:'Un director introduce pontaj electronic la minut, rapoarte zilnice de activitate si aproba personal toate solicitarile de zi libera, inclusiv pentru seniorii cu 12 ani experienta. Argumenteaza ca "fara control, oamenii nu muncesc". Cum incadrezi aceasta situatie?',
+   o:['Directorul aplica o abordare Teoria Y, bazata pe incredere si transparenta','Directorul aplica o abordare Teoria X; pe termen lung va genera demotivare, rezistenta si pierderea angajatilor valorosi','Masurile sunt justificate intr-o organizatie cu angajati fara experienta','McGregor nu face distinctie intre controlul aplicat seniorilor si juniorilor'],
+   c:1,e:'Convingerea ca angajatii nu muncesc fara control si nevoia de a aproba fiecare decizie minora sunt caracteristice Teoriei X. McGregor avertizeaza ca acest stil devine auto-profetie: angajatii tratati ca lipsiti de responsabilitate incep sa se comporte ca atare. Pe termen lung, seniorii competenti vor parasi organizatia, ramand doar cei care accepta controlul excesiv.'},
+  {teorie:'Teoria X si Y',q:'O managera delega proiecte complexe echipei, stabileste obiective clare si lasa echipa sa decida metodele de lucru. Intervine doar cand este solicitata. Doi colegi seniori o critica spunand ca "nu isi face treaba". Care este perspectiva X si Y?',
+   o:['Colegi seniori au dreptate: un manager eficient trebuie sa fie prezent si sa controleze permanent','Managera aplica o abordare Teoria Y; critica reflecta convingerile Teoria X ale colegilor, nu o problema manageriala','Managera aplica o abordare Teoria X sub masca autonomiei','McGregor sustine ca delegarea este eficienta doar pentru angajatii cu vechime peste 5 ani'],
+   c:1,e:'Managera aplica principiile Teoriei Y: incredere in capacitatile echipei, obiective clare cu autonomie de metoda, interventia ca suport nu ca control. Critica seniorilor reflecta propriile lor convingeri Teoria X despre cum ar trebui sa arate un manager. McGregor sustine ca abordarea Y este mai eficienta pe termen lung, mai ales cu angajati competenti.'},
+  {teorie:'Teoria X si Y',q:'O companie trece printr-o restructurare si introduce micromanagement: fiecare email se copiaza managerului, fiecare decizie se aproba ierarhic. Dupa 6 luni, productivitatea scade dramatic, iar cei mai buni angajati demisioneaza. Cum explici prin X si Y?',
+   o:['Scaderea productivitatii este cauzata de incertitudinea restructurarii, nu de stilul de management','Adoptarea masiva a stilului Teoria X a distrus increderea, autonomia si motivatia intrinseca a angajatilor competenti','Micromanagement-ul a fost insuficient aplicat; ar fi trebuit extins la toate nivelurile','McGregor recomanda micromanagement in perioadele de criza organizationala'],
+   c:1,e:'Restructurarea a impus un stil Teoria X generalizat. Angajatii competenti, cu motivatie intrinseca (Teoria Y), au reactionat la pierderea autonomiei prin demotivare si parasirea organizatiei. Cei care au ramas sunt mai toleranti cu controlul sau nu au optiuni externe. McGregor sustine ca Teoria X aplica un paradox: tocmai angajatii valorosi pe care vrei sa ii controlezi sunt cei care pleaca.'},
+  {teorie:'Teoria X si Y',q:'Un HR manager propune introducerea muncii de acasa fara pontaj, cu evaluare strict pe rezultate. Directorul general se opune spunand "nu pot sti daca muncesc daca nu ii vad". Cum analizezi conflictul?',
+   o:['Directorul general are dreptate: prezenta fizica este necesara pentru colaborare eficienta','HR managerul promoveaza o abordare Teoria Y (rezultate in locul prezentei); directorul exprima o convingere Teoria X clasica (angajatul trebuie vazut pentru a fi de incredere)','Ambele abordari sunt echivalente; depinde de natura muncii','Teoria Y recomanda prezenta fizica combinata cu autonomie de metoda'],
+   c:1,e:'Conflictul exprima perfect tensiunea dintre Teoria X si Teoria Y. Directorul exprima o convingere X fundamentala: angajatul nu poate fi de incredere fara supraveghere fizica. HR managerul propune o abordare Y: definitia muncii este indeplinirea obiectivelor, nu prezenta. McGregor sustine ca in conditii de incredere si obiective clare, angajatii sunt mai productivi si mai motivati decat sub supraveghere directa.'},
+
+  // ECHITATE (idx 12-15)
+  {teorie:'Teoria Echitatii',q:'Un inginer cu 9 ani experienta descopera intamplator ca un coleg nou angajat cu 3 ani experienta castiga cu 18% mai mult, deoarece a negociat mai bine la angajare. In urmatoarele luni, inginerul senior refuza sarcini extra, intarzie la sedinte si produce mai putin. Ce explica Adams?',
+   o:['Inginerul are o problema de atitudine si trebuie avertizat disciplinar','Perceptia de inechitate (contributie mai mare / recompensa mai mica comparativ cu colegul) genereaza comportamente de reechilibrare: reducerea efortului pana la nivelul perceput ca echitabil','Diferenta salariala este justificata de negociere si angajatul ar trebui sa accepte situatia','Adams sustine ca inechitatea pozitiva (a primi mai mult) este motivanta, nu demotivanta'],
+   c:1,e:'Acesta este un exemplu clasic al Teoriei Echitatii. Angajatul compara raportul sau contributie/recompensa cu cel al colegului de referinta si percepe inechitate negativa. Reactia de reechilibrare este reducerea contributiei (mai putin efort, mai putina implicare) pana cand raportul perceput devine echilibrat. Interventia HR corecta este clarificarea grilei salariale si, daca inechitatea e reala, corectarea ei.'},
+  {teorie:'Teoria Echitatii',q:'O echipa de 4 analisti financiari realizeaza impreuna un raport complex. Managerul acorda bonusul integral unui singur coleg argumentand ca "a coordonat". Ceilalti 3 nu spun nimic la sedinta, dar in 3 luni doi dintre ei demisioneaza iar al treilea devine dezangajat. Cum explica Adams?',
+   o:['Demisiile si dezangajarea sunt coincidente; nu au legatura cu bonusul','Perceptia de inechitate in distribuirea recompensei genereaza reactii comportamentale: plecarea este reactia extrema la inechitate perceputa ca imposibil de remediat intern','Managerul a luat decizia corecta; cei care au plecat nu aveau valori organizationale potrivite','Adams sustine ca reactia la inechitate este intotdeauna comunicata verbal, nu comportamental'],
+   c:1,e:'Adams identifica mai multe reactii la inechitate: reducerea efortului, cererea de marire, schimbarea perceptiei, schimbarea persoanei de referinta sau parasirea organizatiei. Lipsa reactiei verbale nu inseamna acceptare. Plecarea este reactia extrema atunci cand angajatul considera ca inechitatea nu poate fi corectata intern. HR-ul ar trebui sa implementeze criterii transparente de distribuire a bonusurilor.'},
+  {teorie:'Teoria Echitatii',q:'O angajata HR afla ca un coleg din alt departament cu functie similara si mai putina vechime primeste masina de serviciu si 5 zile extra de concediu, beneficii pe care ea nu le are. Decide sa lucreze strict conform fisei postului, fara niciun minut in plus, desi anterior era foarte implicata. Cum interpretezi?',
+   o:['Angajata are un comportament egoist si nu intelege ca beneficiile se acorda pe criterii specifice fiecarui post','Angajata reechilibreaza raportul contributie/recompensa prin reducerea contributiei la nivelul perceput ca echitabil fata de recompensa primita','Adams sustine ca inechitatea produce intotdeauna cerere de marire salariala, nu reducerea efortului','Situatia demonstreaza ca transparenta salariilor este daunatoare organizational'],
+   c:1,e:'Angajata aplica mecanism classic Adams: perceptia de inechitate (contributie mare, recompensa relativ mai mica vs. coleg) determina reechilibrarea prin reducerea contributiei. Nu este vorba de "egoism", ci de un mecanism psihologic de cautare a echilibrului perceput. HR-ul trebuie sa asigure coerenta interna a pachetelor de compensatii si sa comunice transparent criteriile de acordare a beneficiilor.'},
+  {teorie:'Teoria Echitatii',q:'Un angajat afla ca primeste acelasi salariu cu un coleg, dar el gestioneaza dublu numarul de clienti si are rezultate superioare. Cere o marire care este refuzata. In urmatoarele luni devine mai putin productiv, desi anterior era unul dintre cei mai buni. Adams cum explica?',
+   o:['Angajatul nu intelege ca salariul nu reflecta neaparat performanta individuala','Perceptia de inechitate (contributie superioara / recompensa egala) genereaza reducerea efortului pana la nivelul perceput ca proportional cu recompensa primita','Adams sustine ca cererea de marire este singura reactie rationala la inechitate','Situatia demonstreaza ca angajatul este demotivat din cauze externe, nu organizationale'],
+   c:1,e:'Refuzul maririi, dupa confirmarea inechitatii reale, lasa angajatul cu o singura optiune de reechilibrare accesibila: reducerea contributiei. Angajatul rationeaza implicit: daca primesc la fel ca colegul care face jumatate, voi produce si eu la nivelul recompensei primite. Interventia HR corecta ar fi fie corectarea inechitatii salariale, fie transparenta clara a criteriilor de compensare.'
+  }
+];
+
+// ── POOL CULTURA (8 scenarii, vom alege 4) ──
+var PCULTURA = [
+  // ELEMENTE CULTURA (idx 0-3)
+  {tip:'Elemente cultura',q:'O companie tech afiseaza pe site si in sedinte valorile: "transparenta, inovatie si echipa". In realitate, propunerile angajatilor necesita 4 niveluri de aprobare, angajatii care au gresit in proiecte au fost marginalizati, iar biroul directorului general este inchis si accesibil doar prin secretara. Care element cultural explica cel mai bine contradictia?',
+   o:['Declaratia de misiune (valorile afisate) este elementul dominant al culturii organizationale','Contradictia este explicata de practicile reale, simbolurile (biroul inchis) si sistemele de control (penalizarea greselilor) care transmit valori opuse declaratiei','Cultura organizatiei este inovatoare; problema este comunicarea interna deficitara','Valorile declarate nu sunt relevante cultural; conteaza doar structura formala'],
+   c:1,e:'Hofstede arata ca practicile reale (cum se iau deciziile zi de zi), simbolurile (biroul inchis = inaccessibilitate) si sistemele de control (ce comportamente sunt recompensate/penalizate) sunt elementele culturii mai profunde si mai reale decat declaratiile de valori. Contradictia intre "cultura declarata" si "cultura traita" este unul dintre cele mai frecvente probleme organizationale.'},
+  {tip:'Elemente cultura',q:'La o firma de consultanta, toti angajatii vechi povestesc despre fondatorul firmei care a lucrat 72 de ore non-stop pentru a salva primul client major. Noul angajat observa ca toata lumea sta la birou pana tarziu, desi munca se poate face si acasa. Ce element cultural explica acest comportament?',
+   o:['Angajatii raman tarziu din cauza unui management deficitar care nu permite munca de acasa','Povestile despre fondator si eroii organizatiei transmit valori si norme comportamentale implicite; dedicarea fizica a devenit norma culturala nescriasa','Structura formala (contractul de munca) obliga la prezenta fizica prelungita','Simbolurile din birou (trofee, diplome) creeaza presiune implicita sa ramai tarziu'],
+   c:1,e:'Povestile si eroii sunt unul dintre elementele culturale identificate de Hofstede. Naratiunile despre fondator sau despre momente cheie definesc ce comportamente sunt valorizate in organizatie. Povestea fondatorului care a muncit 72 de ore a devenit norma implicita: dedicarea = prezenta fizica prelungita. Noul angajat nu a primit nicio instructiune explicita, dar a inteles mesajul cultural.'},
+  {tip:'Elemente cultura',q:'O organizatie publica romaneasca anunta o reforma a proceselor interne pentru a deveni "mai eficienta si orientata catre cetatean". Dupa 2 ani, evaluarile externe arata ca nimic nu s-a schimbat in realitate. Angajatii spun informal "asa am facut intotdeauna si asa vom face". Ce element cultural explica rezistenta?',
+   o:['Reforma a esuat din cauza finantarii insuficiente a noilor procese','Practicile organizationale sunt cel mai greu de modificat element cultural; ele necesita schimbarea comportamentelor tuturor membrilor, nu doar a procedurilor scrise','Rezistenta este cauzata de structura formala (organigrama) care nu a fost modificata','Simbolurile organizationale (sigla, uniformele) nu au fost actualizate odata cu reforma'],
+   c:1,e:'Hofstede identifica practicile ca elementul cel mai profund si mai rezistent al culturii: "felul in care se fac lucrurile aici". Schimbarea practicilor necesita mai mult decat proceduri noi pe hartie; presupune schimbarea comportamentelor efective ale tuturor membrilor, ceea ce ia ani si necesita vointa manageriala sustinuta. Reformele care schimba doar structura formala sau declaratiile de valori esueaza frecvent din aceasta cauza.'},
+  {tip:'Elemente cultura',q:'Intr-o corporatie multinationala, sistemul de evaluare anuala recompenseaza exclusiv rezultatele financiare individuale. Compania declara ca promoveaza "colaborarea si inovatia". Angajatii evita sa impartaseasca informatii cu colegii si refuza sa investeasca timp in proiecte inovatoare fara rezultate imediate. Care element cultural creeaza aceasta dinamica?',
+   o:['Angajatii nu inteleg valorile companiei si au nevoie de training de cultura organizationala','Sistemul de control (ce se masoara si recompenseaza) transmite un mesaj cultural opus valorilor declarate; angajatii rationalizeaza corect in functie de stimulentele reale','Structura puterii (managementul de top) nu aplica valorile declarate','Problema este de comunicare: valorile nu sunt suficient promovate intern'],
+   c:1,e:'Sistemele de control (ce se evalueaza, ce se recompenseaza, ce se penalizeaza) sunt elementul cultural care arata ce conteaza cu adevarat in organizatie, independent de declaratii. Daca sistemul de evaluare recompenseaza exclusiv rezultatele individuale, angajatii vor optimiza pentru acel criteriu. Contradictia intre "valori declarate" si "sisteme de control" produce comportamentele observate.'},
+
+  // HOFSTEDE APLICAT ORGANIZATIONAL (idx 4-7)
+  {tip:'Dimensiuni Hofstede',q:'O companie multinationala deschide un birou in Romania si aduce un manager expat din Olanda care organizeaza sedinte saptamanale in care cere tuturor sa critice deschis orice decizie manageriala, inclusiv ale sale. Angajatii romani tac sau ofera feedback vag pozitiv. Managerul este frustrat. Cum explici prin Hofstede?',
+   o:['Angajatii romani nu au competentele necesare pentru gandire critica','Romania are un scor ridicat la distanta fata de putere; criticarea deschisa a superiorilor este cultural inconfortabila, spre deosebire de Olanda care are un scor scazut la aceasta dimensiune','Sedintele saptamanale sunt prea frecvente pentru cultura romaneasca','Problema este de comunicare cross-culturala, nu de dimensiuni Hofstede'],
+   c:1,e:'Romania are un scor ridicat la dimensiunea "distanta fata de putere" (PDI ~90), ceea ce inseamna ca inegalitatea ierarhica este considerata normala si dorita. Critica deschisa a superiorilor este perceputa ca inadecvata si potential periculoasa. Olanda are un scor PDI scazut (~38), unde relatia ierarhica este mult mai egala. Managerul olandez aplica norma sa culturala intr-un context cultural diferit.'},
+  {tip:'Dimensiuni Hofstede',q:'O firma japoneza si una suedeza colaboreaza pe un proiect. Japonezii iau decizii lent, prin consens colectiv, si considera ca a grabi decizia este nepoliticos. Suedezii vor decizii rapide si delegare individuala. Conflictul de proces intarzie proiectul. Cum explici prin Hofstede?',
+   o:['Japonezii sunt mai putin eficienti organizatoric decat suedezii','Diferenta reflecta dimensiunea individualism/colectivism: Japonia are o cultura colectivista (decizii prin consens de grup), Suedia are o cultura individualista cu delegare personala','Conflictul este cauzat de distanta fata de putere diferita intre cele doua culturi','Suedia are evitare ridicata a incertitudinii, de aceea prefera decizii rapide'],
+   c:1,e:'Japonia are un scor IDV (individualism) scazut (~46), cultura colectivista unde deciziile importante se iau prin consens de grup (nemawashi) pentru a asigura angajamentul tuturor. Suedia are IDV ridicat (~71), cultura individualista unde responsabilitatea si delegarea individuala sunt normale. Conflictul de proces reflecta doua paradigme de luare a deciziilor fundamentale diferite, nu incompetenta uneia dintre parti.'},
+  {tip:'Dimensiuni Hofstede',q:'O firma germana introduce un nou software de gestiune a proiectelor si trimite angajatilor un manual de 80 de pagini cu proceduri detaliate, fluxuri de aprobare si scenarii de exceptie. Angajatii americani din subsidiara considera manualul exagerat si birocratic. Cum explici prin Hofstede?',
+   o:['Germania are un sistem educational superior care produce angajati care prefera documentatia','Germania are un scor ridicat la evitarea incertitudinii (UAI ~65); procedurile detaliate reduc anxietatea fata de situatii neclare. SUA are UAI scazut (~46); ambiguitatea este mai usor tolerata','Diferenta reflecta distanta fata de putere: Germania este mai ierarhica decat SUA','Manualul de 80 pagini este excesiv pentru orice cultura; problema este de management intern'],
+   c:1,e:'Evitarea incertitudinii (UAI) masoara gradul in care membrii unei culturi se simt amenintati de situatii neclare sau nefamiliare. Germania are UAI ridicat: regulile, procedurile si documentatia reduc anxietatea organizationala. SUA are UAI mai scazut: angajatii americani sunt mai confortabili cu improvizatia si rezolvarea adhoc. Niciunul nu este "mai bun" &mdash; reflecta valori culturale diferite.'},
+  {tip:'Dimensiuni Hofstede',q:'Intr-o companie olandeza cu birouri in Romania, managementul olandez introduce "ore de creativitate": 2 ore pe saptamana in care angajatii pot lucra la orice proiect personal legat de business. Angajatii romani nu stiu ce sa faca in aceste ore si cer sa li se asigneze sarcini concrete. Cum explici prin Hofstede?',
+   o:['Angajatii romani nu sunt creativi; problema este de selectie de personal','Combinatia distanta fata de putere ridicata (astepti sarcini de la superior) si evitarea incertitudinii ridicata (situatia neclara/structurata produce anxietate) explica disconfortul romanilor fata de autonomia nestructurata','Olanda are o cultura colectivista care favorizeaza proiectele de grup autonome','Angajatii romani au nevoie de training de creativitate inainte de a putea folosi aceste ore'],
+   c:1,e:'Combinatia celor doua dimensiuni explica situatia: PDI ridicat in Romania inseamna ca angajatii asteapta directii de la superiori, nu initiaza din proprie vointa; UAI ridicat inseamna ca situatiile neclare si nestructurate produc anxietate. Olanda are PDI si UAI scazut: autonomia nestructurata este confortabila. Managementul olandez a exportat o practica care functioneaza in cultura lor dar nu se potriveste contextului cultural roman fara adaptare.'
+  }
+];
+
+// ── POOL HOFSTEDE JOC (12 scenarii) ──
+var PHOF = [
+  {q:'O firma japoneza cere angajatilor sa participe la un ritual colectiv de 10 minute inainte de program, indiferent de sarcini sau urgente.',ctx:'La ce dimensiune Hofstede te gandesti in primul rand?',o:['Evitarea incertitudinii &mdash; ritualuri ca reducere a anxietatii','Distanta fata de putere &mdash; respectarea ordinului superiorului','Colectivism &mdash; primatul grupului fata de individ','Orientare termen lung &mdash; disciplina ca investitie'],c:2,e:'Colectivism. Participarea obligatorie la un ritual colectiv, indiferent de agenda individuala, reflecta primatul grupului fata de preferintele individuale. Individul nu poate decide sa sara ritualul fara a afecta armonia grupului.'},
+  {q:'Un manager german trimite un email de rutina citand procedura P-14-B, sectiunea 3.2, articolul 7. Colegii gasesc acest nivel de precizie absolut normal.',ctx:'Ce dimensiune Hofstede ilustreaza aceasta normalitate?',o:['Masculinitate &mdash; orientare spre performanta si precizie','Evitarea incertitudinii &mdash; nevoia de reguli si structura clara','Orientare termen lung &mdash; documentare riguroasa','Distanta fata de putere &mdash; respectul fata de proceduri oficiale'],c:1,e:'Evitarea incertitudinii (UAI). Germania are UAI ridicat: procedurile detaliate si referintele precise la reglementari reduc ambiguitatea si anxietatea organizationala. Ceea ce pare birocratic altor culturi este confort si siguranta pentru culturile cu UAI ridicat.'},
+  {q:'Un junior american contrazice direct si argumentat propunerea directorului general intr-o sedinta. Directorul ii multumeste public pentru perspectiva si dezbate propunerea cu echipa.',ctx:'Ce dimensiune descrie aceasta dinamica?',o:['Individualism &mdash; exprimarea libera a opiniei personale','Distanta mica fata de putere &mdash; relatia ierarhica egala','Feminitate &mdash; relatii deschise si comunicare onesta','Evitarea incertitudinii redusa &mdash; toleranta la opinii divergente'],c:1,e:'Distanta mica fata de putere. In culturile cu PDI scazut, diferenta intre ierarhii este de rol si responsabilitate, nu de statut personal. Contradicerea deschisa a unui superior nu este perceput ca lipsa de respect, ci ca contributie valoroasa. In culturi cu PDI ridicat, acelasi comportament ar fi inadecvat.'},
+  {q:'Un angajat suedez refuza o promotie care i-ar tripla salariul deoarece ar implica deplasari frecvente si mai putin timp cu familia. Colegii sai svedezi considera decizia complet rationala.',ctx:'Ce dimensiune Hofstede descrie aceasta decizie?',o:['Colectivism &mdash; familia ca grup prioritar','Feminitate &mdash; calitatea vietii si relatiile personale primeaza','Evitarea incertitudinii &mdash; teama de schimbarea rutinei','Orientare termen scurt &mdash; preferinta pentru prezent'],c:1,e:'Feminitate (MAS scazut). Suedia are unul dintre cele mai scazute scoruri MAS din lume (~5). In culturile feminine, calitatea vietii, relatiile personale si echilibrul munca-viata primeaza fata de castigul material si avansarea profesionala. Refuzul unei promotii pentru mai mult timp cu familia este complet normal si neremarkabil in cultura suedeza.'},
+  {q:'O companie din Coreea de Sud evalueaza candidatii la angajare tinand cont de universitatea absolvita, familia din care provin si reteaua lor de contacte sociale, nu doar de CV-ul profesional.',ctx:'Ce dimensiune Hofstede explica aceasta practica?',o:['Distanta mare fata de putere &mdash; statutul social conteaza','Colectivism &mdash; angajatorul recruteaza un subgrup, nu doar un individ','Evitarea incertitudinii &mdash; reducerea riscului prin informatii suplimentare','Orientare termen lung &mdash; investitie in relatii durabile'],c:1,e:'Colectivism. In culturile colectiviste, individul este perceput ca parte dintr-un subgrup (familie, universitate, retea). Angajatorul nu recruteaza un individ izolat, ci o persoana cu apartenenta la un grup. Calitatea grupului de apartenta este relevanta pentru decizia de angajare. In culturile individualiste, informatiile despre familie sau retea sociala ar fi considerate irelevante sau discriminatorii.'},
+  {q:'Un manager francez se simte confortabil sa isi inceapa ziua fara o agenda prestabilita si tolereaza bine proiectele al caror rezultat final nu este clar definit din start.',ctx:'Ce dimensiune (sau lipsa ei) reflecta aceasta atitudine?',o:['Distanta mica fata de putere &mdash; managerul nu are nevoie de validare','Evitarea incertitudinii redusa &mdash; confortul cu ambiguitatea si situatiile nestructurate','Orientare termen lung &mdash; rabdarea fata de rezultate neclare','Individualism &mdash; incredere in propria judecata'],c:1,e:'Evitarea incertitudinii redusa (UAI scazut). Toleranta fata de situatii nestructurate, ambigue sau impredictibile este caracteristica culturilor cu UAI scazut. Franta are un UAI moderat dar managerul descris are o toleranta personala ridicata la ambiguitate. Contrastul cu Germania (UAI ridicat) este puternic: un manager german ar fi inconfortabil fara o agenda clara.'},
+  {q:'O firma americana recompenseaza exclusiv individual: bonusurile sunt publice si variaza masiv, competitia interna este incurajata, promovarea este strict pe rezultate personale.',ctx:'Ce dimensiune (sau combinatie) ilustreaza cel mai bine aceasta abordare?',o:['Individualism combinat cu masculinitate &mdash; EU conteaza si performanta e valoare centrala','Distanta mica fata de putere cu orientare termen scurt','Evitarea incertitudinii redusa cu colectivism moderat','Feminitate cu orientare termen lung'],c:0,e:'Individualism (IDV ridicat: ~91 SUA) + Masculinitate (MAS ridicat: ~62 SUA). Recompensa exclusiv individuala reflecta individualismul: fiecare raspunde de propriile rezultate. Publicarea bonusurilor si incurajarea competitiei reflecta masculinitatea: performanta si castigul material sunt valori centrale. Aceasta combinatie este tipica culturilor anglosaxone.'},
+  {q:'Angajatii dintr-o institutie publica romaneasca urmeaza procedurile scrise, dar deciziile reale se iau informal prin relatii personale, "pile" si aprobare de sus in jos.',ctx:'Ce combinatie de dimensiuni Hofstede explica aceasta realitate?',o:['Colectivism (retele informale) cu distanta mare fata de putere (decizii centralizate sus)','Masculinitate cu evitarea incertitudinii ridicata','Individualism cu orientare termen scurt','Feminitate cu distanta mica fata de putere'],c:0,e:'Colectivism + Distanta mare fata de putere. Reteaua informala de relatii (pile, conexiuni) este mecanismul colectivist de navigare a sistemului. Dependenta de aprobarea de sus reflecta distanta mare fata de putere: deciziile sunt luate de cei cu autoritate, nu delegate. Romania are scoruri ridicate la ambele dimensiuni (PDI ~90, IDV ~30), ceea ce produce exact dinamica descrisa.'},
+  {q:'O companie chineza investeste anual sume mari in formarea angajatilor tineri, desi stie ca beneficiile concrete vor fi vizibile abia dupa 8-10 ani. Managementul considera aceasta o prioritate strategica.',ctx:'Ce dimensiune Hofstede explica aceasta abordare?',o:['Colectivism &mdash; investitia in grup primeaza','Evitarea incertitudinii &mdash; reducerea riscului prin pregatire','Orientare termen lung &mdash; perseverenta si investitia pentru beneficii viitoare','Distanta mare fata de putere &mdash; respectul fata de strategie'],c:2,e:'Orientare termen lung (LTO ridicat: China ~87). Culturile cu LTO ridicat valorizeaza perseverenta, economisirea pentru viitor si investitiile cu orizont lung. Sacrificiul prezent pentru beneficii viitoare este o virtute, nu o lipsa de pragmatism. Culturile cu LTO scazut (ex. SUA: ~26) prefera rezultate trimestriale si ROI rapid.'},
+  {q:'Intr-o firma braziliana, angajatii raman la birou 2-3 ore dupa program chiar si cand nu au sarcini urgente, pentru a nu parea mai putin dedicati decat colegii sau managerul.',ctx:'Ce dimensiune principala ilustreaza acest comportament?',o:['Masculinitate &mdash; dedicarea aparenta ca valoare de statut','Colectivism &mdash; presiunea de conformitate cu grupul','Distanta mare fata de putere &mdash; imitarea comportamentului superiorului','Evitarea incertitudinii &mdash; anxietate legata de perceptia altora'],c:0,e:'Masculinitate (MAS ridicat: Brazilia ~49, cu variatii regionale spre masculinitate). Dedicarea fizica vizibila (ore suplimentare, prezenta prelungita) este un semnal de statut si angajament in culturile masculine. "Munca dura" si dedicarea sunt valori centrale. Contrastul cu Suedia (MAS ~5): un suedez care ramane tarziu fara motiv ar fi privit cu curiozitate, nu cu admiratie.'},
+  {q:'O firma scandinava permite angajatilor sa plece la 15:00 daca si-au terminat sarcinile zilei, fara sa ceara permisiune sau sa ofere explicatii. Managerul considera asta evident si normal.',ctx:'Ce combinatie de dimensiuni Hofstede reflecta aceasta politica?',o:['Feminitate cu distanta mica fata de putere &mdash; calitatea vietii si egalitate ierarhica','Individualism cu evitarea incertitudinii redusa','Colectivism cu orientare termen lung','Masculinitate cu distanta mare fata de putere'],c:0,e:'Feminitate (calitatea vietii si echilibrul muncii primeaza fata de prezenta ca valoare) + Distanta mica fata de putere (angajatul nu are nevoie de aprobarea superiorului pentru decizii personale de rutina). Tarile nordice combina aceste doua dimensiuni: munca este un mijloc, nu un scop in sine, iar relatia cu managerul este egala si bazata pe incredere.'},
+  {q:'Un angajat indian nu isi contrazice niciodata managerul in public, chiar daca stie ca decizia este gresita. Asteapta un context privat sau nu spune nimic. Colegii considera asta normal.',ctx:'Ce dimensiune Hofstede explica acest comportament?',o:['Colectivism &mdash; evitarea conflictului pentru armonia grupului','Distanta mare fata de putere &mdash; ierarhia nu se contrazice public','Evitarea incertitudinii &mdash; frica de consecinte neclare','Orientare termen lung &mdash; rabdare tactica'],c:1,e:'Distanta mare fata de putere (PDI ridicat: India ~77). In culturile cu PDI ridicat, superiorii nu se contrazic public; aceasta ar fi un afront la adresa autoritatii si o amenintare la adresa armoniei ierarhice. Aceasta nu este "frica" individuala ci o norma culturala: comunicarea negativa cu superiorii se face indirect, in privat, sau nu se face deloc.'}
+];
+
+// ── POOL QUIZ (16 intrebari) ──
+var PQUIZ = [
+  {q:'Conform teoriei lui Maslow, care afirmatie este corecta?',o:['Toate nevoile motiveaza simultan un angajat','Nevoile sunt satisfacute ierarhic, de la baza spre varf','Nevoile financiare sunt intotdeauna prioritare','Nevoile de stima sunt mai puternice decat cele de implinire'],c:1,e:'Maslow propune o ierarhie stricta: un nivel superior nu motiveaza pana cand cel inferior nu este satisfacut. Nevoile fiziologice si de securitate trebuie acoperite inainte ca recunoasterea sau implinirea sa aiba efect motivator.'},
+  {q:'Herzberg sustine ca marirea salariului:',o:['Este cel mai puternic motivator pe termen lung','Motiveaza angajatii noi dar nu si pe cei vechi','Elimina insatisfactia dar nu produce motivatie activa','Nu are niciun efect organizational'],c:2,e:'Salariul este factor de igiena: absenta sau insuficienta sa produce insatisfactie, dar prezenta sa (sau cresterea) nu produce motivatie activa. Motivatia vine din factorii motivatori: realizare, recunoastere, responsabilitate, continut interesant al muncii.'},
+  {q:'Un manager care instaleaza camere de supraveghere si raporturi zilnice obligatorii pentru toti angajatii, inclusiv seniori, se incadreaza in:',o:['Teoria Y &mdash; control pentru cresterea eficientei','Teoria X &mdash; convingerea ca angajatii nu muncesc fara supraveghere','Teoria Echitatii &mdash; asigurarea tratamentului egal','Teoria lui Maslow &mdash; satisfacerea nevoii de securitate'],c:1,e:'Teoria X McGregor: convingerea fundamentala ca angajatii evita munca si trebuie controlati permanent. Aceasta convingere genereaza stilul autoritar de management. McGregor avertizeaza ca acest stil devine auto-profetie si pierde angajatii valorosi.'},
+  {q:'Care element al culturii organizationale este cel mai dificil de modificat?',o:['Simbolurile (titulaturi, birouri)','Sistemele de control (evaluare, recompensare)','Practicile (felul in care se fac lucrurile zi de zi)','Structura formala (organigrama)'],c:2,e:'Practicile sunt cel mai adanc inradacinate element cultural: ele implica comportamentele efective ale tuturor membrilor organizatiei si nu pot fi schimbate printr-un simplu decret managerial. Necesita timp indelungat, coerenta si implicarea intregii organizatii.'},
+  {q:'Romania are un scor ridicat la dimensiunea "distanta fata de putere". Ce comportament organizational este cel mai probabil in acest context?',o:['Angajatii contrazic frecvent deciziile managerilor in sedinte','Deciziile sunt centralizate, ierarhia este acceptata si superiorii nu se contrazic public','Organizatiile sunt descentralizate si functioneaza prin consens','Promovarea se face exclusiv pe criterii de performanta individuala'],c:1,e:'Scorul PDI ridicat al Romaniei (~90) inseamna ca inegalitatea ierarhica este acceptata si asteptata. Deciziile sunt luate sus si implementate jos; contradicerea publica a superiorilor este inadecvata cultural; accesul la managementul de top este limitat si mediat.'},
+  {q:'Delegarea eficienta, conform teoriei organizationale, include obligatoriu:',o:['Transferul complet al responsabilitatii managerului catre subordonat','Atribuirea sarcinii, acordarea autoritatii necesare si un mecanism de verificare','Atribuirea sarcinii fara sistem de monitorizare pentru a demonstra incredere','Stabilirea unui termen limita strict, fara alte detalii'],c:1,e:'Delegarea eficienta are trei componente: (1) atribuirea clara a sarcinii, (2) acordarea autoritatii necesare pentru a o indeplini si (3) un sistem de verificare a progresului si rezultatelor. Fara autoritate, delegarea nu functioneaza. Fara verificare, nu exista feedback.'},
+  {q:'Care factor CRESTE coeziunea unui grup, conform teoriei grupurilor?',o:['Dimensiunea mare a grupului (peste 15 membri)','Concurenta intensa intre membrii aceluiasi grup','Existenta unui competitor extern sau a unui obiectiv comun amenintat','Dominarea unui singur lider informal puternic'],c:2,e:'Concurenta cu un grup extern sau amenintarea unui obiectiv comun creste solidaritatea si coeziunea interna. Paradoxal, o amenintare externa uneste grupul mai eficient decat orice interventie manageriala directa. Concurenta interna, dimpotriva, scade coeziunea.'},
+  {q:'Conform teoriei lui Adams, care NU este o reactie tipica la perceptia de inechitate negativa?',o:['Reducerea voluntara a efortului depus','Cererea explicita a unei mariri salariale','Sabotarea colegului care este perceput ca sursa de inechitate','Parasirea organizatiei'],c:2,e:'Adams identifica 5 reactii la inechitate: reducerea efortului, cererea de marire, schimbarea perceptiei (re-evaluarea contributiei proprii sau a colegului), schimbarea persoanei de referinta si plecarea. Sabotarea directa a colegului nu este inclusa in model; reactiile vizeaza propriul comportament sau perceptia, nu actiunea directa impotriva altuia.'},
+  {q:'Diferenta esentiala intre factorii de igiena si factorii motivatori la Herzberg este:',o:['Factorii de igiena sunt mai importanti decat cei motivatori','Factorii motivatori elimina insatisfactia; factorii de igiena produc satisfactie','Factorii de igiena previn insatisfactia; factorii motivatori produc satisfactie si implicare activa','Nu exista o diferenta practica intre cele doua categorii'],c:2,e:'Cele doua tipuri de factori opereaza pe axe diferite: factorii de igiena opereaza pe axa insatisfactie-neutralitate (absenta lor = insatisfactie, prezenta lor = neutralitate), iar factorii motivatori opereaza pe axa neutralitate-satisfactie (prezenta lor = satisfactie activa). Nu sunt doua extreme ale aceluiasi continuum.'},
+  {q:'Teoria Y a lui McGregor presupune, in esenta, ca angajatii:',o:['Trebuie recompensati financiar pentru orice efort suplimentar','Sunt lipsiti de ambitie si prefera sa fie condusi','In conditii potrivite, cauta si accepta responsabilitate si sunt capabili de auto-control','Au nevoie de control strict pentru a-si atinge potentialul'],c:2,e:'Teoria Y: oamenii nu sunt lipsiti de ambitie prin natura; in conditii de incredere, obiective clare si autonomie, ei se auto-motiveaza, cauta responsabilitate si isi exercita creativitatea. Stilul managerial corespunzator este participativ, bazat pe obiective si incredere, nu pe control.'},
+  {q:'Colectivismul in sensul lui Hofstede inseamna ca:',o:['Angajatii prefera sa lucreze in echipe decat individual','Interesele si loialitatea fata de grup (familie, echipa, organizatie) primeaza fata de interesul individual','Deciziile se iau intotdeauna prin vot democratic','Organizatia are programe sociale extinse pentru angajati'],c:1,e:'Colectivismul Hofstede nu descrie preferinta pentru munca in echipa, ci un sistem de valori: individul se defineste prin grupul de apartenenta, loialitatea fata de grup este primara, iar interesul individual se subordoneaza celui de grup. Implica recrutare prin retea, protectia membrilor in-group si distinctia clara intre in-group si out-group.'},
+  {q:'In cultura cu evitarea ridicata a incertitudinii (UAI ridicat), organizatiile tind sa:',o:['Tolereze bine situatiile ambigue si nestructurate','Aiba putine reguli scrise si sa lase mult la discretia angajatilor','Aiba multe reguli, proceduri si structuri formale pentru a reduce anxietatea','Incurajeze improvizatia si solutiile ad-hoc'],c:2,e:'UAI ridicat inseamna ca ambiguitatea si nesiguranta sunt surse de anxietate culturala. Organizatiile din aceste culturi raspund prin creare de reguli, proceduri detaliate, structuri formale si norme clare. Ce pare birocratic din exterior este o sursa de confort si siguranta din interior.'},
+  {q:'Ce descrie, in esenta, dimensiunea "masculinitate" la Hofstede?',o:['Proportia de angajati masculini din organizatii','Stilul autoritar si dominant al managerilor din acea cultura','Masura in care valorile dominante ale societatii sunt performanta, competitia si castigul material','Preferinta pentru structuri ierarhice rigide'],c:2,e:'Masculinitatea (MAS) nu se refera la gen ci la valorile dominante ale societatii: in culturile masculine, competitia, castigul material, ambitia si performanta sunt centrale; in culturile feminine, cooperarea, calitatea vietii, modestia si solidaritatea sunt prioritare. Termenul este considerat datat dar ramane in uz in literatura.'},
+  {q:'Care este principala critica adusa modelului ierarhic al nevoilor lui Maslow?',o:['Maslow a ignorat nevoile fiziologice in modelul sau','Ierarhia nu este universala; ordinea nevoilor variaza semnificativ cultural si individual','Modelul se aplica doar in organizatii mari, nu si in IMM-uri','Maslow a subestimat importanta nevoilor financiare'],c:1,e:'Cercetarile cross-culturale ulterioare (Hofstede inclus) au aratat ca ordinea satisfacerii nevoilor nu este universala. In unele culturi, nevoile sociale primeaza fata de cele de securitate; in altele, implinirea poate fi cautata inaintea stimei. Modelul ramane util ca cadru de gandire dar nu trebuie aplicat rigid.'},
+  {q:'Grupurile informale intr-o organizatie:',o:['Sunt intotdeauna o sursa de probleme si trebuie descurajate de management','Apar spontan si satisfac nevoi sociale si psihologice neacoperite de structura formala','Sunt controlate de management pentru a canaliza comunicarea informala','Nu influenteaza performanta organizationala'],c:1,e:'Grupurile informale apar spontan pe baza afintatilor personale, proximitatii fizice sau intereselor comune. Ele satisfac nevoi sociale (afiliere, prietenie) si psihologice (sprijin, informare). Pot sustine sau contracara obiectivele organizationale. Managementul eficient le recunoaste existenta si le canalizeaza constructiv, nu le ignora.'},
+  {q:'Dimensiunea "orientare termen lung" (LTO) a lui Hofstede se refera la:',o:['Planificarea strategica pe termen de 5-10 ani a organizatiei','Valorile culturale de perseverenta, economisire si investitie in viitor vs. traditie si rezultate imediate','Loialitatea angajatilor fata de organizatie pe termen lung','Stabilitatea contractelor de munca in cadrul organizatiei'],c:1,e:'LTO nu descrie planificarea organizationala ci valori culturale: culturile cu LTO ridicat (ex. China, Japonia) valorizeaza perseverenta, economisirea, adaptarea la circumstante si sacrificiul prezent pentru beneficii viitoare. Culturile cu LTO scazut (ex. SUA, Africa de Vest) valorizeaza traditia, rezultatele rapide si indeplinirea obligatiilor sociale imediate.'}
+];
+
+// ── STATE ──
+var COD_TRAIN='aplicatii2026';var COD_EXAM='exam2024';
+var MAX_TRAIN=7;var MAX_EXAM=5;
+
+var COD_TRAIN='aplicatii2026';var COD_EXAM='exam2024';
+var MAX_TRAIN=7;var MAX_EXAM=5;
+
+var ST = {
+  done:{motiv:false,cultura:false,hofstede:false,quiz:false},
+  student:{n:'',g:''},seed:0,modAcces:'',
+  sel:{motiv:[],cultura:[],hofstede:[],quiz:[]},
+  scores:{motiv:0,cultura:0,hofstede:0,quiz:0},
+  progress:{motiv:0,cultura:0,hofstede:0,quiz:0},
+  answers:{motiv:[],cultura:[],hofstede:[],quiz:[]},
+  shuffled:{}
+};
+
+function mkRng(s){var seed=s;return function(){seed=(seed*1664525+1013904223)&0xffffffff;return(seed>>>0)/0xffffffff;};}
+function shuffle(arr,r){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(r()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pickN(pool,n,r){var idx=[];for(var i=0;i<pool.length;i++)idx.push(i);return shuffle(idx,r).slice(0,n);}
+function mkSeed(n,g){var h=0,s=n+g+Date.now().toString().slice(-4);for(var i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return Math.abs(h);}
+
+function buildSelections(seed){
+  var r=mkRng(seed);
+  // Motivatie: 2 per teorie (Maslow 0-3, Herzberg 4-7, XY 8-11, Echitate 12-15)
+  var blocks=[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15]];
+  var motiv=[];
+  for(var b=0;b<blocks.length;b++){var bl=shuffle(blocks[b].slice(),r);motiv.push(bl[0],bl[1]);}
+  ST.sel.motiv=motiv;
+  // Cultura: 2 elemente (0-3) + 2 hofstede aplicat (4-7)
+  var ce=shuffle([0,1,2,3],r).slice(0,2);
+  var ch=shuffle([4,5,6,7],r).slice(0,2);
+  ST.sel.cultura=ce.concat(ch);
+  // Hofstede joc: 8 din 12
+  ST.sel.hofstede=pickN(PHOF,8,r);
+  // Quiz: 8 din 16
+  ST.sel.quiz=pickN(PQUIZ,8,r);
+}
+
+// ── GENERIC SECTION RENDERER ──
+function renderSection(secId, pool, selArr, idx, isLast, nextFn) {
+  var dotsEl=document.getElementById(secId+'Dots');
+  var qEl=document.getElementById(secId+'Q');
+  var n=selArr.length;
+
+  // build dots
+  var dotsHtml='';
+  for(var i=0;i<n;i++){
+    var cl='pdot';
+    if(i<idx) cl+=(ST.answers[secId][i]===true?' c':' w');
+    else if(i===idx) cl+=' cur';
+    dotsHtml+='<div class="'+cl+'"></div>';
+  }
+  dotsEl.innerHTML=dotsHtml;
+
+  if(idx>=n){
+    // show score
+    showSectionScore(secId);
+    qEl.innerHTML='';
+    return;
+  }
+
+  var q=pool[selArr[idx]];
+  var L=['A','B','C','D'];
+
+  // Shuffle options using seeded rng based on seed + secId + idx so it's reproducible
+  var optIdx=[0,1,2,3].slice(0,q.o.length);
+  var shuffleRng=mkRng(ST.seed + selArr[idx]*100 + idx);
+  for(var si=optIdx.length-1;si>0;si--){
+    var sj=Math.floor(shuffleRng()*(si+1));
+    var st=optIdx[si];optIdx[si]=optIdx[sj];optIdx[sj]=st;
+  }
+  // Store shuffled order so answerQ can find the correct answer position
+  if(!ST.shuffled) ST.shuffled={};
+  if(!ST.shuffled[secId]) ST.shuffled[secId]={};
+  ST.shuffled[secId][idx]=optIdx;
+
+  var optsHtml='';
+  for(var j=0;j<optIdx.length;j++){
+    optsHtml+='<button class="sopt" onclick="answerQ(\''+secId+'\','+idx+','+j+')"><span class="sopt-letter">'+L[j]+'</span>'+q.o[optIdx[j]]+'</button>';
+  }
+
+  var tag=q.tip||q.teorie||'Scenariu';
+  var ctx=q.ctx?('<div class="scen-ctx">'+q.ctx+'</div>'):'';
+
+  qEl.innerHTML='<div class="scen-card">'
+    +'<div class="scen-tag">'+tag+'</div>'
+    +'<div class="scen-q">'+q.q+'</div>'
+    +ctx
+    +'<div class="scen-opts" id="opts-'+secId+'">'+optsHtml+'</div>'
+    +'<div class="scen-fb" id="fb-'+secId+'"></div>'
+    +'<div id="nxt-'+secId+'" style="display:none;text-align:right;margin-top:16px">'
+    +(idx<n-1?'<button class="btnpri" onclick="'+nextFn+'('+( idx+1)+')">Urmatorul &rarr;</button>'
+              :'<button class="btnpri" onclick="showSectionScore(\''+secId+'\')">Vezi scorul &rarr;</button>')
+    +'</div></div>';
+}
+
+function answerQ(secId, idx, chosen){
+  var pool, selArr;
+  if(secId==='motiv'){pool=PMOTIV;selArr=ST.sel.motiv;}
+  else if(secId==='cultura'){pool=PCULTURA;selArr=ST.sel.cultura;}
+  else if(secId==='hofstede'){pool=PHOF;selArr=ST.sel.hofstede;}
+  else{pool=PQUIZ;selArr=ST.sel.quiz;}
+
+  var q=pool[selArr[idx]];
+  // Get shuffled order for this question
+  var optIdx=(ST.shuffled&&ST.shuffled[secId]&&ST.shuffled[secId][idx])||[0,1,2,3];
+  // 'chosen' is the display position; find the original option index
+  var chosenOriginal=optIdx[chosen];
+  var ok=(chosenOriginal===q.c);
+  ST.answers[secId][idx]=ok;
+  if(ok)ST.scores[secId]++;
+  ST.progress[secId]=idx+1;
+
+  // Find display position of correct answer
+  var correctDisplay=optIdx.indexOf(q.c);
+
+  // update buttons
+  var btns=document.querySelectorAll('#opts-'+secId+' .sopt');
+  for(var i=0;i<btns.length;i++){
+    btns[i].disabled=true;btns[i].style.cursor='default';
+    if(i===correctDisplay)btns[i].classList.add('correct');
+    else if(i===chosen&&!ok)btns[i].classList.add('wrong');
+  }
+
+  var fb=document.getElementById('fb-'+secId);
+  fb.className='scen-fb show '+(ok?'fb-correct':'fb-wrong');
+  fb.innerHTML='<strong>'+(ok?'&#10003; Corect!':'&#10007; Incorect.')+'</strong> '+q.e;
+
+  document.getElementById('nxt-'+secId).style.display='block';
+
+  // update dots
+  var dotsEl=document.getElementById(secId+'Dots');
+  var dots=dotsEl.querySelectorAll('.pdot');
+  if(dots[idx]){dots[idx].className='pdot '+(ok?'c':'w');}
+
+  // update nav score
+  updateNavScore(secId);
+  localStorage.setItem('mru1_st',JSON.stringify(ST));
+}
+
+function updateNavScore(secId){
+  var el=document.getElementById('nav-'+secId);
+  if(!el)return;
+  var existing=el.querySelector('.nscore');
+  var maxScores={motiv:8,cultura:4,hofstede:8,quiz:8};
+  var mx=maxScores[secId]||8;
+  var sc=ST.scores[secId];
+  var pr=ST.progress[secId];
+  if(pr>0){
+    if(!existing){var sp=document.createElement('span');sp.className='nscore';el.appendChild(sp);existing=sp;}
+    existing.textContent=sc+'/'+pr;
+  }
+}
+
+// navigation functions for each section
+function nextMotiv(i){renderSection('motiv',PMOTIV,ST.sel.motiv,i,i===ST.sel.motiv.length-1,'nextMotiv');}
+function nextCultura(i){renderSection('cultura',PCULTURA,ST.sel.cultura,i,i===ST.sel.cultura.length-1,'nextCultura');}
+function nextHof(i){renderSection('hofstede',PHOF,ST.sel.hofstede,i,i===ST.sel.hofstede.length-1,'nextHof');}
+function nextQuiz(i){renderSection('quiz',PQUIZ,ST.sel.quiz,i,i===ST.sel.quiz.length-1,'nextQuiz');}
+
+function showSectionScore(secId){
+  var maxMap={motiv:8,cultura:4,hofstede:8,quiz:8};
+  var labMap={motiv:'motivScore',cultura:'culturaScore',hofstede:'hofstedeScore',quiz:'quizScore'};
+  var mx=maxMap[secId];var sc=ST.scores[secId];
+  var el=document.getElementById(labMap[secId]);
+  if(!el)return;
+  el.style.display='flex';
+  document.getElementById(secId+'Snum').textContent=sc;
+  var pct=sc/mx;
+  var labels=['Reia sectiunea si revizuieste teoria.','Partial corect. Reia conceptele cheie.','Bine! Intelegi conceptele principale.','Foarte bine! Cunostinte solide.','Excelent! Stapanesti perfect materia.'];
+  var tl=['Sub 50%','50-60%','60-75%','75-90%','90-100%'];
+  var i=pct<0.5?0:pct<0.625?1:pct<0.75?2:pct<0.9?3:4;
+  document.getElementById(secId+'Snum').textContent=sc;
+  document.getElementById(secId+'Slab').textContent=sc+' / '+mx+' corecte ('+tl[i]+')';
+  document.getElementById(secId+'Stxt').textContent=labels[i];
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function show(id){
+  var ss=document.querySelectorAll('.section');for(var i=0;i<ss.length;i++)ss[i].classList.remove('visible');
+  var ns=document.querySelectorAll('.ni');for(var i=0;i<ns.length;i++)ns[i].classList.remove('active');
+  document.getElementById('section-'+id).classList.add('visible');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='predare')buildPredare();
+}
+
+function done(id){
+  ST.done[id]=true;
+  document.getElementById('nav-'+id).classList.add('done');
+  updProg();
+  localStorage.setItem('mru1_st',JSON.stringify(ST));
+}
+
+function updProg(){
+  var c=0;var k=Object.keys(ST.done);for(var i=0;i<k.length;i++)if(ST.done[k[i]])c++;
+  document.getElementById('progTxt').textContent=c+' / 4';
+  document.getElementById('pbfill').style.width=(c/4*100)+'%';
+}
+
+function buildPredare(){
+  // score summary
+  var items=[
+    {id:'motiv',label:'Teorii motivatie',mx:8},
+    {id:'cultura',label:'Cultura org.',mx:4},
+    {id:'hofstede',label:'Joc Hofstede',mx:8},
+    {id:'quiz',label:'Autoevaluare',mx:8}
+  ];
+  var sumHtml='';
+  for(var i=0;i<items.length;i++){
+    var sc=ST.scores[items[i].id];var mx=items[i].mx;
+    var pct=mx>0?sc/mx:0;
+    var col=pct>=0.75?'var(--green)':pct>=0.5?'var(--gold)':'var(--red)';
+    sumHtml+='<div class="ss-card"><div class="ss-num" style="color:'+col+'">'+sc+'/'+mx+'</div><div class="ss-label">'+items[i].label+'</div></div>';
+  }
+  var total=ST.scores.motiv+ST.scores.cultura+ST.scores.hofstede+ST.scores.quiz;
+  sumHtml+='<div class="ss-card"><div class="ss-num">'+total+'/28</div><div class="ss-label">Total</div></div>';
+  document.getElementById('scoreSummary').innerHTML=sumHtml;
+
+  // checklist
+  var cl='';
+  for(var i=0;i<items.length;i++){
+    var ok=ST.done[items[i].id];
+    cl+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:'+(ok?'var(--greenbg)':'var(--surface2)')+';border-radius:var(--r);border-left:3px solid '+(ok?'var(--green)':'var(--border)')+';margin-bottom:8px"><span>'+(ok?'&#10003;':'&#9675;')+'</span><span style="font-size:13.5px;color:'+(ok?'var(--green)':'var(--muted)')+'">'+items[i].label+'</span></div>';
+  }
+  document.getElementById('checklist').innerHTML=cl;
+}
+
+async function predaLucrarea(){
+  var btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='Se trimite...';
+  var data={
+    nume:ST.student.n,grupa:ST.student.g,timestamp:new Date().toISOString(),seed:ST.seed,
+    scor_motiv:ST.scores.motiv,scor_cultura:ST.scores.cultura,
+    scor_hofstede:ST.scores.hofstede,scor_quiz:ST.scores.quiz,
+    scor_total:ST.scores.motiv+ST.scores.cultura+ST.scores.hofstede+ST.scores.quiz,
+    prog_motiv:ST.done.motiv,prog_cultura:ST.done.cultura,prog_hofstede:ST.done.hofstede,prog_quiz:ST.done.quiz,
+    raspunsuri_motiv:JSON.stringify(ST.answers.motiv),
+    raspunsuri_cultura:JSON.stringify(ST.answers.cultura),
+    raspunsuri_hof:JSON.stringify(ST.answers.hofstede),
+    raspunsuri_quiz:JSON.stringify(ST.answers.quiz),
+    nota:null,obs:''
+  };
+  if(ST.modAcces)data.mod_acces=ST.modAcces;
+  try{
+    var r=await fetch('https://script.google.com/macros/s/AKfycbwXcTXZi61Hp2hCMQcNsJLipi6LNJLufOkAof0uBLjVoOCAJewesrs4XD_uVa-jfGRy/exec',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+    if(!r.ok)throw new Error(await r.text());
+    var z=document.getElementById('subZone');z.className='subzone done';
+    var total=ST.scores.motiv+ST.scores.cultura+ST.scores.hofstede+ST.scores.quiz;
+    var reiaBtn=ST.modAcces==='train'?'<button class="subbtn" style="margin-top:14px;background:var(--navy)" onclick="reiaModul()">&#8635; Reia seminarul</button>':'';
+    z.innerHTML='<div style="font-size:36px;margin-bottom:12px">&#10003;</div><h3 style="color:var(--green)">Raspunsuri trimise!</h3><p>Scorul tau total: <strong>'+total+'/28</strong>. Profesorul va consulta rezultatele.</p>'+reiaBtn;
+  }catch(err){btn.disabled=false;btn.textContent='📤 Trimite raspunsurile';alert('Eroare la trimitere.\n'+err.message);}
+}
+
+function checkCod(){
+  var cod=document.getElementById('inputCod').value.trim();
+  var errEl=document.getElementById('idErrCod');
+  if(cod===COD_TRAIN){
+    ST.modAcces='train';
+    document.getElementById('idStep2Title').textContent='Seminar — Modul 1';
+    document.getElementById('idStep2Desc').textContent='Poti accesa de maxim '+MAX_TRAIN+' ori. Vei primi scenarii diferite la fiecare incercare.';
+    document.getElementById('idStep1').style.display='none';
+    document.getElementById('idStep2').style.display='block';
+  }else if(cod===COD_EXAM){
+    ST.modAcces='exam';
+    document.getElementById('idStep2Title').textContent='Examen — Modul 1';
+    document.getElementById('idStep2Desc').textContent='Ai la dispozitie maxim '+MAX_EXAM+' sustineri. Completeaza cu atentie.';
+    document.getElementById('idStep1').style.display='none';
+    document.getElementById('idStep2').style.display='block';
+  }else{
+    errEl.style.display='block';
+  }
+}
+
+async function checkLimit(n,g,mod){
+  var max=mod==='train'?MAX_TRAIN:MAX_EXAM;
+  try{
+    return {count:0,max:max,ok:true};
+  }catch(e){return {count:0,max:max,ok:true};}
+}
+
+function reiaModul(){
+  ['mru1_id','mru1_seed','mru1_sel','mru1_st','mru1_mod'].forEach(function(k){localStorage.removeItem(k);});
+  location.reload();
+}
+
+function submitIdentity(){
+  var n=document.getElementById('inputNume').value.trim();
+  var g=document.getElementById('inputGrupa').value.trim();
+  if(!n||!g){document.getElementById('idErr').style.display='block';return;}
+  var btn=document.querySelector('#idStep2 .id-btn');
+  btn.disabled=true;btn.textContent='Se verifica...';
+  checkLimit(n,g,ST.modAcces).then(function(res){
+    btn.disabled=false;btn.textContent='Genereaza setul meu →';
+    if(!res.ok){
+      var errEl=document.getElementById('idErr');
+      errEl.style.display='block';
+      errEl.textContent='Ai atins limita de '+(ST.modAcces==='train'?'seminare':'sustineri')+' ('+res.max+'/'+res.max+'). Contacteaza profesorul.';
+      return;
+    }
+    ST.student={n:n,g:g};
+    var seed=mkSeed(n,g);ST.seed=seed;
+    buildSelections(seed);
+    localStorage.setItem('mru1_id',JSON.stringify({n:n,g:g}));
+    localStorage.setItem('mru1_seed',String(seed));
+    localStorage.setItem('mru1_sel',JSON.stringify(ST.sel));
+    localStorage.setItem('mru1_st',JSON.stringify(ST));
+    localStorage.setItem('mru1_mod',ST.modAcces);
+    var tip=ST.modAcces==='train'?'Antr.'+(res.count+1)+'/'+res.max:'Exam.'+(res.count+1)+'/'+res.max;
+    document.getElementById('hUser').textContent=n+' · '+g+' ('+tip+')';
+    document.getElementById('identifyScreen').classList.remove('show');
+    renderSection('motiv',PMOTIV,ST.sel.motiv,0,false,'nextMotiv');
+    renderSection('cultura',PCULTURA,ST.sel.cultura,0,false,'nextCultura');
+    renderSection('hofstede',PHOF,ST.sel.hofstede,0,false,'nextHof');
+    renderSection('quiz',PQUIZ,ST.sel.quiz,0,false,'nextQuiz');
+  }).catch(function(e){
+    btn.disabled=false;btn.textContent='Genereaza setul meu →';
+    alert('Eroare: '+e.message);
+  });
+}
+
+function restoreState(){
+  var saved=localStorage.getItem('mru1_id');
+  var savedSel=localStorage.getItem('mru1_sel');
+  var savedSt=localStorage.getItem('mru1_st');
+  var savedSeed=localStorage.getItem('mru1_seed');
+  if(!saved||!savedSel||!savedSeed)return false;
+  var id=JSON.parse(saved);
+  ST.student=id;ST.seed=parseInt(savedSeed);
+  var sel=JSON.parse(savedSel);
+  ST.sel=sel;
+  if(savedSt){
+    var st=JSON.parse(savedSt);
+    ST.scores=st.scores||ST.scores;
+    ST.answers=st.answers||ST.answers;
+    ST.done=st.done||ST.done;
+    ST.progress=st.progress||ST.progress;
+  }
+  document.getElementById('hUser').textContent=id.n+' · '+id.g;
+  var dkeys=Object.keys(ST.done);
+  for(var i=0;i<dkeys.length;i++)if(ST.done[dkeys[i]])document.getElementById('nav-'+dkeys[i])?.classList.add('done');
+  updProg();
+  // restore each section to last answered question
+  var sections=[
+    {id:'motiv',pool:PMOTIV,fn:'nextMotiv'},
+    {id:'cultura',pool:PCULTURA,fn:'nextCultura'},
+    {id:'hofstede',pool:PHOF,fn:'nextHof'},
+    {id:'quiz',pool:PQUIZ,fn:'nextQuiz'}
+  ];
+  for(var s=0;s<sections.length;s++){
+    var sec=sections[s];
+    var prog=ST.progress[sec.id]||0;
+    var sel=ST.sel[sec.id];
+    if(prog>=sel.length){
+      renderSection(sec.id,sec.pool,sel,sel.length,true,sec.fn);
+      showSectionScore(sec.id);
+    } else {
+      renderSection(sec.id,sec.pool,sel,prog,false,sec.fn);
+      // re-render answered questions as answered
+    }
+    updateNavScore(sec.id);
+  }
+  return true;
+}
+
+(function(){
+  var restored=restoreState();
+  document.getElementById('loadingScreen').style.display='none';
+  if(!restored) document.getElementById('identifyScreen').classList.add('show');
+})();
+</script>
+</body>
+</html>

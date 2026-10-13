@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplicatii MRU - Modul 3</title>
+<style>
+:root{--bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#ddd9d0;--navy:#1a3a5c;--navy2:#264d75;--gold:#b8892a;--goldl:#e8c87a;--text:#1c1c1c;--muted:#6b6560;--light:#9a948e;--green:#2d6a4f;--greenbg:#eaf4ef;--red:#8b2635;--redbg:#fdf0f0;--purple:#4a2d7a;--purplebg:#f0ecf8;--r:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.65;min-height:100vh}
+.overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center}
+#loadingScreen{background:var(--navy);flex-direction:column;color:#fff}
+#loadingScreen h2{font-size:22px;font-weight:700;margin-bottom:8px}
+#loadingScreen p{font-size:13px;opacity:.7}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#identifyScreen{background:rgba(0,0,0,.7);display:none}
+#identifyScreen.show{display:flex}
+.id-box{background:#fff;border-radius:12px;padding:36px 40px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.id-box h2{font-size:20px;color:var(--navy);margin-bottom:6px;font-weight:700}
+.id-box p{font-size:13px;color:var(--muted);margin-bottom:24px}
+.id-label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.id-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;margin-bottom:16px;background:var(--bg);font-family:inherit}
+.id-input:focus{outline:none;border-color:var(--navy);background:#fff}
+.id-btn{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.id-btn:hover{background:var(--navy2)}
+.id-err{font-size:12px;color:var(--red);margin-top:8px;display:none}
+header{background:var(--navy);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.hbadge{background:var(--gold);font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 7px;border-radius:3px;flex-shrink:0}
+.htitle{font-size:13px;opacity:.9;margin-left:14px}
+.huser{font-size:12px;opacity:.8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hprog{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);padding:5px 12px;border-radius:20px;font-size:12px;white-space:nowrap}
+.pbmini{width:60px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
+.pbfill{height:100%;background:var(--goldl);border-radius:2px;transition:width .4s}
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 56px)}
+nav{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.nlabel{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--light);padding:0 20px 8px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;border-left:3px solid transparent;font-size:13.5px;color:var(--muted);transition:all .15s}
+.ni:hover{background:var(--surface2);color:var(--text)}
+.ni.active{border-left-color:var(--navy);background:#eef3f8;color:var(--navy);font-weight:600}
+.ni.done{color:var(--green)}
+.ni .nscore{margin-left:auto;font-size:11px;background:var(--greenbg);color:var(--green);padding:2px 7px;border-radius:10px;font-weight:700}
+.nicon{font-size:15px;min-width:20px;text-align:center}
+.ndiv{margin:16px 20px;border:none;border-top:1px solid var(--border)}
+main{padding:36px 48px;max-width:860px}
+.section{display:none}
+.section.visible{display:block;animation:fi .25s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.shead{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sicon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.ib{background:#e8f0f8}.ia{background:#fdf4e3}.ig{background:#e8f4ef}.ip{background:#f0ecf8}.ir{background:#fce8ec}
+.sheading{font-size:18px;font-weight:700;color:var(--navy)}
+.sdesc{font-size:13px;color:var(--muted);margin-top:2px}
+.icard{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:10px;padding:28px 32px;margin-bottom:24px}
+.icard h2{font-size:22px;font-weight:700;margin-bottom:10px;line-height:1.3}
+.icard p{font-size:14px;opacity:.85;max-width:560px;line-height:1.7}
+.otags{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+.otag{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500}
+.thbox{border-radius:var(--r);padding:20px 24px;margin-bottom:20px;border:1px solid var(--border)}
+.th-navy{background:#eef3f8;border-left:5px solid var(--navy)}
+.th-gold{background:#fdf7ec;border-left:5px solid var(--gold)}
+.th-green{background:var(--greenbg);border-left:5px solid var(--green)}
+.th-purple{background:var(--purplebg);border-left:5px solid var(--purple)}
+.th-red{background:var(--redbg);border-left:5px solid var(--red)}
+.thtag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;opacity:.7}
+.thbox h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.thbox p{font-size:13.5px;line-height:1.75;margin-bottom:8px}
+.thbox p:last-child{margin-bottom:0}
+.thbox ul{padding-left:20px;font-size:13.5px;line-height:1.75}
+.thbox ul li{margin-bottom:6px}
+.thbox strong{font-weight:700}
+.th2col{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin:12px 0}
+.th2col-hd{padding:10px 16px;font-size:12px;font-weight:700;color:#fff;text-align:center}
+.th2col-bd{padding:10px 14px;font-size:13px;line-height:1.6;border-right:1px solid var(--border);border-top:1px solid var(--border)}
+.th2col-bd:nth-child(2n){border-right:none}
+.th2col-bd ul{padding-left:16px}
+.th2col-bd ul li{margin-bottom:4px}
+.scen-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.scen-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);margin-bottom:8px}
+.scen-q{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px;line-height:1.5}
+.scen-ctx{font-size:13px;color:var(--muted);margin-bottom:18px;font-style:italic}
+.scen-opts{display:flex;flex-direction:column;gap:9px}
+.sopt{display:flex;align-items:flex-start;gap:11px;padding:12px 16px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;background:var(--bg);text-align:left;font-size:13.5px;font-family:inherit;line-height:1.5;width:100%;transition:all .15s}
+.sopt:hover{border-color:var(--navy);background:#eef3f8}
+.sopt.correct{border-color:var(--green);background:var(--greenbg);color:var(--green)}
+.sopt.wrong{border-color:var(--red);background:var(--redbg);color:var(--red)}
+.sopt-letter{min-width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-top:1px}
+.scen-fb{margin-top:14px;padding:14px 16px;border-radius:var(--r);font-size:13.5px;line-height:1.65;display:none}
+.scen-fb.show{display:block}
+.fb-correct{background:var(--greenbg);color:var(--green);border-left:4px solid var(--green)}
+.fb-wrong{background:var(--redbg);color:var(--red);border-left:4px solid var(--red)}
+.prog-dots{display:flex;gap:5px;margin-bottom:18px}
+.pdot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:background .2s}
+.pdot.c{background:var(--green)}.pdot.w{background:var(--red)}.pdot.cur{background:var(--navy)}
+.scorebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 24px;margin-top:20px;display:flex;align-items:center;gap:20px}
+.scirc{width:60px;height:60px;border-radius:50%;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.snum{font-size:20px;font-weight:700}.sden{font-size:10px;opacity:.7}
+.snav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.btnpri{padding:10px 22px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s}
+.btnpri:hover{background:var(--navy2)}
+.btnsec{padding:10px 18px;border:1px solid var(--border);background:#fff;border-radius:var(--r);font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s}
+.btnsec:hover{border-color:var(--navy);color:var(--navy)}
+.subzone{background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;margin-top:24px}
+.subzone.done{border-color:var(--green);background:var(--greenbg)}
+.subzone h3{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:8px}
+.subzone p{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+.subbtn{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:13px 32px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s}
+.subbtn:hover{background:#235a40}
+.subbtn:disabled{opacity:.5;cursor:default}
+.score-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.ss-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center}
+.ss-num{font-size:22px;font-weight:700;color:var(--navy)}
+.ss-label{font-size:11px;color:var(--muted);margin-top:3px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.steps-list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.step-item{display:flex;gap:12px;align-items:flex-start}
+.step-num{min-width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px}
+.step-content{font-size:13.5px;line-height:1.6}
+.step-content strong{color:var(--navy)}
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  nav{position:static;height:auto;display:flex;gap:4px;padding:12px;overflow-x:auto;flex-direction:row;border-right:none;border-bottom:1px solid var(--border)}
+  .nlabel,.ndiv{display:none}
+  .ni{padding:7px 12px;border-left:none;border-bottom:2px solid transparent;white-space:nowrap;border-radius:4px}
+  .ni.active{border-bottom-color:var(--navy);background:#eef3f8}
+  .ni .nscore{display:none}
+  main{padding:20px 16px}
+  .th2col{grid-template-columns:1fr}
+  .score-summary{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="overlay" style="display:flex;flex-direction:column">
+  <div class="spinner"></div>
+  <h2>Aplicatii MRU</h2>
+  <p>Se pregatesc scenariile tale...</p>
+</div>
+
+<div id="identifyScreen" class="overlay">
+  <div class="id-box">
+    <div id="idStep1">
+      <h2>Acces Modul 3</h2>
+      <p>Introdu codul de acces primit de la profesor.</p>
+      <label class="id-label">Cod de acces</label>
+      <input type="password" id="inputCod" class="id-input" placeholder="Cod de acces">
+      <button class="id-btn" onclick="checkCod()">Continua &rarr;</button>
+      <div class="id-err" id="idErrCod">Cod incorect.</div>
+    </div>
+    <div id="idStep2" style="display:none">
+      <h2 id="idStep2Title">Identificare student</h2>
+      <p id="idStep2Desc">Completeaza datele. Vei primi un set unic de scenarii.</p>
+      <label class="id-label">Nume si prenume</label>
+      <input type="text" id="inputNume" class="id-input" placeholder="ex: Ionescu Alexandru">
+      <label class="id-label">Grupa</label>
+      <input type="text" id="inputGrupa" class="id-input" placeholder="ex: 571, 581">
+      <button class="id-btn" onclick="submitIdentity()">Genereaza setul meu &rarr;</button>
+      <div class="id-err" id="idErr">Te rog completeaza toate campurile.</div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div style="display:flex;align-items:center;overflow:hidden">
+    <span class="hbadge">AN</span>
+    <span class="htitle">MRU &middot; Modulul 3 &middot; Recrutarea si Selectia Resurselor Umane</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="huser" id="hUser"></span>
+    <div class="hprog"><span id="progTxt">0 / 4</span><div class="pbmini"><div class="pbfill" id="pbfill" style="width:0%"></div></div></div>
+  </div>
+</header>
+
+<div class="layout">
+<nav>
+  <div class="nlabel">Activitati</div>
+  <div class="ni active" onclick="show('intro')" id="nav-intro"><span class="nicon">📋</span> Introducere</div>
+  <div class="ni" onclick="show('recrutare')" id="nav-recrutare"><span class="nicon">🔍</span> Recrutarea RU</div>
+  <div class="ni" onclick="show('surse')" id="nav-surse"><span class="nicon">📡</span> Surse si metode</div>
+  <div class="ni" onclick="show('selectie')" id="nav-selectie"><span class="nicon">✅</span> Selectia RU</div>
+  <div class="ni" onclick="show('quiz')" id="nav-quiz"><span class="nicon">🧠</span> Autoevaluare</div>
+  <hr class="ndiv">
+  <div class="ni" onclick="show('predare')" id="nav-predare"><span class="nicon">📤</span> Trimite raspunsurile</div>
+</nav>
+
+<main>
+
+<!-- INTRO -->
+<div class="section visible" id="section-intro">
+  <div class="icard">
+    <h2>Recrutarea si Selectia Resurselor Umane</h2>
+    <p>Modulul acopera Capitolul 4 din suportul de curs: particularitatile si etapele recrutarii, sursele interne si externe, metodele de recrutare, evaluarea planului de recrutare si etapele selectiei.</p>
+    <div class="otags"><span class="otag">Recrutarea RU</span><span class="otag">Surse interne/externe</span><span class="otag">Selectia RU</span><span class="otag">CV si Interviu</span></div>
+  </div>
+  <div class="pcard">
+    <div style="font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Structura aplicatiei</div>
+    <div style="font-size:14px;line-height:1.8">
+      <p style="margin-bottom:8px">&#9312; <strong>Recrutarea RU</strong> &mdash; 6 scenarii despre particularitatile recrutarii, etapele procesului si factorii de influenta.</p>
+      <p style="margin-bottom:8px">&#9313; <strong>Surse si metode de recrutare</strong> &mdash; 6 scenarii despre recrutarea interna vs externa, avantaje/dezavantaje si metode.</p>
+      <p style="margin-bottom:8px">&#9314; <strong>Selectia RU</strong> &mdash; 4 scenarii despre etapele selectiei, tipuri de teste si instrumente (CV, interviu).</p>
+      <p>&#9315; <strong>Test de autoevaluare</strong> &mdash; 8 intrebari din materia capitolului.</p>
+    </div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="show('recrutare')">Incepe &rarr;</button></div>
+</div>
+
+<!-- RECRUTARE -->
+<div class="section" id="section-recrutare">
+  <div class="shead"><div class="sicon ib">🔍</div><div><div class="sheading">Recrutarea resurselor umane</div><div class="sdesc">Definitie, particularitati si etapele procesului</div></div></div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Definitie si scop</div>
+    <h3>Ce este recrutarea resurselor umane</h3>
+    <p>Recrutarea reprezinta activitatea de identificare si atragere in organizatie a persoanelor care au <strong>pregatirea, experienta, motivarea si caracteristicile psihologice</strong> corespunzatoare caracteristicilor functionale ale posturilor vacante.</p>
+    <p><strong>Scopul</strong>: identificarea si dezvoltarea surselor din care organizatia poate atrage un numar cat mai mare de candidati pentru ocuparea posturilor vacante.</p>
+    <p><strong>Importanta</strong>: recrutarea reprezinta baza intregului proces de asigurare cu resurse umane, permitand crearea bazelor de date cu potentiali candidati din randul carora vor fi selectati cei mai potriviti.</p>
+  </div>
+
+  <div class="thbox th-gold">
+    <div class="thtag">Cele 7 particularitati ale recrutarii</div>
+    <h3>Ce face recrutarea diferita de alte activitati HR</h3>
+    <div class="steps-list">
+      <div class="step-item"><div class="step-num">1</div><div class="step-content"><strong>Caracter activ</strong> &mdash; organizatiile trebuie sa mentina permanent preocuparea pentru identificarea si atragerea de noi candidati, nu sa astepte pasiv.</div></div>
+      <div class="step-item"><div class="step-num">2</div><div class="step-content"><strong>Proces bilateral (bidirecțional)</strong> &mdash; candidatii trebuie sa corespunda exigentelor organizatiei, dar si organizatia trebuie sa ofere conditii atractive pentru candidati.</div></div>
+      <div class="step-item"><div class="step-num">3</div><div class="step-content"><strong>Proces de comunicare</strong> &mdash; organizatia transmite candidatilor semnale despre reputatia sa, conditiile de munca si oportunitatile de dezvoltare.</div></div>
+      <div class="step-item"><div class="step-num">4</div><div class="step-content"><strong>Proces managerial complex</strong> &mdash; implica costuri si beneficii, se bazeaza pe rezultatele planificarii RU si presupune mentinerea surselor de atragere a candidatilor.</div></div>
+      <div class="step-item"><div class="step-num">5</div><div class="step-content"><strong>Prioritara selectiei</strong> &mdash; eficienta selectiei este conditionata de capacitatea de a atrage candidati competitivi; fara recrutare buna, selectia nu poate fi eficienta.</div></div>
+      <div class="step-item"><div class="step-num">6</div><div class="step-content"><strong>Strans legata de alte activitati HR</strong> &mdash; depinde de planificarea RU, analiza posturilor si este conditionata de oportunitatile de cariera oferite.</div></div>
+      <div class="step-item"><div class="step-num">7</div><div class="step-content"><strong>Necesitate, nu optiune</strong> &mdash; lipsa salariatilor competenti conditioneaza succesul oricarei companii; caracterul activ al recrutarii este impus de nevoia de oameni competitivi.</div></div>
+    </div>
+  </div>
+
+  <div class="thbox th-green">
+    <div class="thtag">Etapele recrutarii (11 etape)</div>
+    <h3>Procesul complet de recrutare</h3>
+    <ul>
+      <li><strong>Etapa 1</strong> &mdash; Stabilirea bugetului afectat recrutarii (salarii recruiteri, materiale, surse, anunturi)</li>
+      <li><strong>Etapa 2</strong> &mdash; Stabilirea responsabililor cu recrutarea (analisti RU sau firme specializate)</li>
+      <li><strong>Etapa 3</strong> &mdash; Analiza planului de resurse umane al companiei</li>
+      <li><strong>Etapa 4</strong> &mdash; Identificarea posturilor vacante si analiza specificatiilor posturilor</li>
+      <li><strong>Etapa 5</strong> &mdash; Analiza pietei muncii (disponibilitate, distributie geografica, nivel pregatire)</li>
+      <li><strong>Etapa 6</strong> &mdash; Identificarea si alegerea surselor de recrutare (dupa: costuri, numar candidati, timp, natura postului, marimea companiei)</li>
+      <li><strong>Etapa 7</strong> &mdash; Stabilirea perioadei de recrutare</li>
+      <li><strong>Etapa 8</strong> &mdash; Redactarea si alegerea anuntului de angajare</li>
+      <li><strong>Etapa 9</strong> &mdash; Alegerea mijloacelor de transmitere a anuntului</li>
+      <li><strong>Etapa 10</strong> &mdash; Evaluarea impactului (rata de raspuns: numarul de candidaturi primite per sursa)</li>
+      <li><strong>Etapa 11</strong> &mdash; Evaluarea costurilor campaniei (cost per candidatura = cheltuieli totale / numarul de raspunsuri)</li>
+    </ul>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)">Factorii care influenteaza recrutarea: obiectivi (imaginea companiei, legislatia, sindicatele), subiectivi (interesele candidatilor) si conjuncturali (lipsa informatiilor despre companie sau post).</p>
+  </div>
+
+  <div class="thbox" style="background:#fff8e6;border-left:5px solid #e6a817;border:1px solid #f0d080">
+    <div class="thtag" style="color:#8a6000">Perspectiva contemporana (post-2020)</div>
+    <h3 style="color:#5a3e00">Recrutarea in era digitala si AI</h3>
+    <p><strong>Recrutarea prin AI si algoritmi</strong> a transformat radical procesul: sistemele ATS (Applicant Tracking Systems) filtreaza automat sute de CV-uri in secunde pe baza de cuvinte cheie si criterii prestabilite. Aceasta ridica o problema noua: candidatii valorosi dar cu CV-uri neoptimizate pot fi eliminati automat. Critica CV-ului din suportul de curs devine si mai relevanta.</p>
+    <p><strong>Employer branding</strong> a devenit o disciplina strategica: companiile investesc masiv in reputatia lor ca angajatori (Glassdoor, LinkedIn, TikTok cu continut despre cultura interna). Caracterul de comunicare al recrutarii (particularitatea 3) s-a amplificat exponential — candidatii cerceteaza compania inainte de a aplica.</p>
+    <p><strong>Recrutarea pentru roluri remote/hybrid</strong> a eliminat barierele geografice: o companie din Cluj concureaza acum pentru un specialist IT cu firme din Berlin sau Amsterdam care ofera salarii in euro. Analiza pietei muncii (etapa 5) trebuie sa includa acum piata globala pentru rolurile digitalizabile.</p>
+    <p><strong>Video interviurile asincrone</strong> (candidatul inregistreaza raspunsurile, recrutorul le vizualizeaza ulterior) au redus costurile etapei de interviu preliminar dar ridica intrebari despre echitate si potentialul bias al algoritmilor de analiza faciala.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--navy)">
+    <strong style="color:var(--navy)">6 scenarii</strong> despre particularitatile si etapele recrutarii. Identifica raspunsul cel mai bine argumentat.
+  </div>
+
+  <div class="prog-dots" id="recrutareDots"></div>
+  <div id="recrutareQ"></div>
+  <div class="scorebar" id="recrutareScore" style="display:none">
+    <div class="scirc"><div class="snum" id="recrutareSnum">0</div><div class="sden">/ 6</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="recrutareSlab"></div><div style="font-size:13px;color:var(--muted)" id="recrutareStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('recrutare');show('surse')">Continua &rarr;</button></div>
+</div>
+
+<!-- SURSE -->
+<div class="section" id="section-surse">
+  <div class="shead"><div class="sicon ia">📡</div><div><div class="sheading">Surse si metode de recrutare</div><div class="sdesc">Recrutare interna vs externa, avantaje si dezavantaje</div></div></div>
+
+  <div class="thbox th-green">
+    <div class="thtag">Recrutarea din surse interne</div>
+    <h3>Avantaje si dezavantaje ale recrutarii interne</h3>
+    <div class="th2col">
+      <div class="th2col-hd" style="background:var(--green)">Avantaje</div>
+      <div class="th2col-hd" style="background:var(--red)">Dezavantaje</div>
+      <div class="th2col-bd"><ul><li>Cunoastere mai buna a candidatilor (puncte forte/slabe)</li><li>Timp de integrare mai redus</li><li>Atragere mai facila a candidatilor</li><li>Cresterea motivarii si loialitatii</li><li>Costuri de recrutare reduse</li><li>Probabilitate redusa de decizii eronate</li></ul></div>
+      <div class="th2col-bd"><ul><li>Nemultumiri daca asteptarile de promovare nu se concretizeaza</li><li>Probabilitate ridicata de favoritism</li><li>Posibila promovare din antipatii (seful scapa de cineva)</li><li>Unii angajati pot sa nu faca fata noului post</li><li>Efect de unda (un post vacant genereaza altul)</li><li>Nu permite patrunderea de suflu proaspat in organizatie</li></ul></div>
+    </div>
+  </div>
+
+  <div class="thbox th-red">
+    <div class="thtag">Recrutarea din surse externe</div>
+    <h3>Avantaje si dezavantaje ale recrutarii externe</h3>
+    <p><strong>Principale surse externe:</strong> publicitatea, agentiile de recrutare, oficiile de plasare a fortei de munca, internetul, targurile de joburi, referintele, fostii angajati, institutiile de invatamant.</p>
+    <div class="th2col" style="margin-top:12px">
+      <div class="th2col-hd" style="background:var(--green)">Avantaje</div>
+      <div class="th2col-hd" style="background:var(--red)">Dezavantaje</div>
+      <div class="th2col-bd"><ul><li>Numar foarte mare de candidati potentiali</li><li>Suflu proaspat: idei, cunostinte si viziuni noi</li><li>Permite corectarea practicilor discriminatorii</li><li>Satisface nevoi suplimentare de personal</li><li>Imbogateste potentialul intern de dezvoltare</li></ul></div>
+      <div class="th2col-bd"><ul><li>Costuri ridicate (piata muncii mai putin cunoscuta)</li><li>Timp indelungat necesar recrutarii</li><li>Nemultumiri ale angajatilor interni care se simt nedreptajiti</li></ul></div>
+    </div>
+  </div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Metode de recrutare</div>
+    <h3>Cele mai utilizate metode</h3>
+    <ul>
+      <li><strong>Anunturile de angajare</strong> &mdash; continut, forma si dimensiuni adaptate postului</li>
+      <li><strong>Contactele directe</strong> &mdash; abordarea directa a candidatilor potentiali</li>
+      <li><strong>Agentiile de recrutare</strong> &mdash; firme specializate care intermediaza procesul</li>
+      <li><strong>Promovarea si transferurile</strong> &mdash; sursa interna, stimulativa</li>
+      <li><strong>Recomandari</strong> &mdash; prin angajatii existenti</li>
+      <li><strong>Recrutarea online</strong> &mdash; platforme digitale, acoperire larga</li>
+      <li><strong>Targurile de joburi</strong> &mdash; contact direct cu candidatii</li>
+      <li><strong>Propria baza de date</strong> &mdash; candidati anteriori, portofoliu activ</li>
+    </ul>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--gold)">
+    <strong style="color:var(--navy)">6 scenarii</strong> despre surse si metode de recrutare. Identifica sursa sau metoda potrivita situatiei descrise.
+  </div>
+
+  <div class="prog-dots" id="surseDots"></div>
+  <div id="surseQ"></div>
+  <div class="scorebar" id="surseScore" style="display:none">
+    <div class="scirc"><div class="snum" id="surseSnum">0</div><div class="sden">/ 6</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="surseSlab"></div><div style="font-size:13px;color:var(--muted)" id="surseStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('surse');show('selectie')">Continua &rarr;</button></div>
+</div>
+
+<!-- SELECTIE -->
+<div class="section" id="section-selectie">
+  <div class="shead"><div class="sicon ip">✅</div><div><div class="sheading">Selectia resurselor umane</div><div class="sdesc">Etapele selectiei, teste si instrumente cheie</div></div></div>
+
+  <div class="thbox th-purple">
+    <div class="thtag">Definitie si etapele selectiei</div>
+    <h3>Procesul de selectie in 10 etape</h3>
+    <p>Selectia reprezinta alegerea, potrivit anumitor criterii, a celui mai competitiv sau mai potrivit candidat pentru ocuparea unui anumit post.</p>
+    <div class="steps-list" style="margin-top:12px">
+      <div class="step-item"><div class="step-num">1</div><div class="step-content"><strong>Alegerea preliminara</strong> &mdash; pe baza criteriilor din anuntul de angajare</div></div>
+      <div class="step-item"><div class="step-num">2</div><div class="step-content"><strong>Completarea formularului de cerere de angajare</strong> &mdash; insotit de CV si scrisoare de intentie</div></div>
+      <div class="step-item"><div class="step-num">3</div><div class="step-content"><strong>Interviul preliminar</strong> &mdash; comunicare directa intre candidat si angajator</div></div>
+      <div class="step-item"><div class="step-num">4</div><div class="step-content"><strong>Testarea pentru angajare</strong> &mdash; teste de inteligenta, abilitati specifice, cunostinte, personalitate, comportament de grup</div></div>
+      <div class="step-item"><div class="step-num">5</div><div class="step-content"><strong>Verificarea referintelor</strong> &mdash; informatii despre locurile de munca anterioare, comportament, nivel pregatire</div></div>
+      <div class="step-item"><div class="step-num">6</div><div class="step-content"><strong>Examenul medical</strong> &mdash; verifica aptitudinea candidatilor pentru desfasurarea activitatii</div></div>
+      <div class="step-item"><div class="step-num">7</div><div class="step-content"><strong>Interviul final</strong> &mdash; clarificarea aspectelor legate de activitatea la noul loc de munca</div></div>
+      <div class="step-item"><div class="step-num">8</div><div class="step-content"><strong>Decizia de angajare</strong> &mdash; intocmirea ofertei de angajare</div></div>
+      <div class="step-item"><div class="step-num">9</div><div class="step-content"><strong>Instalarea pe post</strong> &mdash; semnarea contractului individual de munca</div></div>
+      <div class="step-item"><div class="step-num">10</div><div class="step-content"><strong>Scrisorile de respingere</strong> &mdash; candidatii respinsi sunt inclusi in baza de date pentru oportunitati viitoare</div></div>
+    </div>
+  </div>
+
+  <div class="thbox th-navy">
+    <div class="thtag">Instrumente cheie in selectie</div>
+    <h3>CV, Scrisoarea de intentie si Interviul</h3>
+    <ul>
+      <li><strong>CV cronologic</strong> &mdash; organizat in ordine cronologica descrescatoare; recomandat pentru trasee profesionale clare</li>
+      <li><strong>CV functional</strong> &mdash; accentueaza realizarile si activitatile; recomandat pentru activitate profesionala bogata si diversa</li>
+      <li><strong>Scrisoarea de intentie</strong> &mdash; insoteste CV-ul, exprima motivatia candidatului pentru postul specific</li>
+      <li><strong>Interviul</strong> &mdash; dialog intre candidat si responsabilul de selectie, pentru verificarea CV-ului, obtinerea de informatii suplimentare si compararea candidatilor</li>
+    </ul>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)">Tipuri de intrebari la interviu: inchise, deschise, de verificare, cu raspuns implicit. Strategia de intervievare include: pregatire, stabilirea echipei, alegerea locului, conditii optime, derulare si evaluare.</p>
+  </div>
+
+  <div class="thbox" style="background:#fff8e6;border-left:5px solid #e6a817;border:1px solid #f0d080">
+    <div class="thtag" style="color:#8a6000">Perspectiva contemporana (post-2020)</div>
+    <h3 style="color:#5a3e00">Selectia in era competentelor si diversitatii</h3>
+    <p><strong>Selectia bazata pe competente (skills-based hiring)</strong> inlocuieste treptat selectia bazata pe diplome si titluri: companiile ca IBM, Google sau Apple au eliminat cerinta de diploma universitara pentru multe roluri, evaluand in schimb competentele demonstrabile. Testele de abilitati specifice (mentionate in suportul de curs) au capatat importanta crescuta.</p>
+    <p><strong>Bias-ul in selectie</strong> este un subiect major: CV-urile anonimizate (fara nume, varsta, gen, fotografie) sunt utilizate pentru a reduce discriminarea inconstienta. Studii recente arata ca numele candidatilor influenteaza semnificativ deciziile de selectie, chiar si la evaluatori cu intentii bune.</p>
+    <p><strong>Selectia pentru cultura organizationala (culture fit)</strong> a devenit controversata: desi intuitiv atractiva, selectia excesiva pe culture fit reduce diversitatea si poate perpetua practici discriminatorii. Alternativa moderna este selectia pe culture add — ce perspective noi aduce candidatul.</p>
+    <p><strong>Referintele in format digital</strong> (LinkedIn recommendations, portofolii online, contributii open-source) completeaza sau inlocuiesc verificarea traditionala a referintelor, oferind o imagine mai completa si mai verificabila a candidatului.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--muted);border-left:4px solid var(--purple)">
+    <strong style="color:var(--navy)">4 scenarii</strong> despre etapele selectiei si instrumentele cheie.
+  </div>
+
+  <div class="prog-dots" id="selectieDots"></div>
+  <div id="selectieQ"></div>
+  <div class="scorebar" id="selectieScore" style="display:none">
+    <div class="scirc"><div class="snum" id="selectieSnum">0</div><div class="sden">/ 4</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="selectieSlab"></div><div style="font-size:13px;color:var(--muted)" id="selectieStxt"></div></div>
+  </div>
+  <div class="snav"><div></div><button class="btnpri" onclick="done('selectie');show('quiz')">Continua &rarr;</button></div>
+</div>
+
+<!-- QUIZ -->
+<div class="section" id="section-quiz">
+  <div class="shead"><div class="sicon ig">🧠</div><div><div class="sheading">Test de autoevaluare</div><div class="sdesc">8 intrebari din Capitolul 4</div></div></div>
+  <div class="prog-dots" id="quizDots"></div>
+  <div id="quizQ"></div>
+  <div class="scorebar" id="quizScore" style="display:none">
+    <div class="scirc"><div class="snum" id="quizSnum">0</div><div class="sden">/ 8</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" id="quizSlab"></div><div style="font-size:13px;color:var(--muted)" id="quizStxt"></div></div>
+  </div>
+  <div class="snav"><button class="btnsec" onclick="showSectionScore('quiz')">Vezi scorul</button><button class="btnpri" onclick="done('quiz');show('predare')">Mergi la trimitere &rarr;</button></div>
+</div>
+
+<!-- PREDARE -->
+<div class="section" id="section-predare">
+  <div class="shead"><div class="sicon ig">📤</div><div><div class="sheading">Trimite raspunsurile</div><div class="sdesc">Trimite scorurile profesorului</div></div></div>
+  <div class="score-summary" id="scoreSummary"></div>
+  <div class="pcard"><div style="font-size:14px;margin-bottom:12px">Progresul tau:</div><div id="checklist"></div></div>
+  <div class="subzone" id="subZone">
+    <h3>Esti pregatit/a?</h3>
+    <p>Scorurile si raspunsurile tale vor fi trimise profesorului.</p>
+    <button class="subbtn" id="subBtn" onclick="predaLucrarea()">📤 Trimite raspunsurile</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+var SUPA_URL='https://aarinakhxzndzuplflgm.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhcmluYWtoeHpuZHp1cGxmbGdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NDU2MzUsImV4cCI6MjEwNjMyMTYzNX0.z-K-iebBaGxyZ6K6iDi0wZReqfgmhMVcmzp7namNxNw';
+
+var PREC=[
+  {tip:'Recrutare RU',q:'Un director HR sustine ca departamentul trebuie sa astepte sa fie contactat de candidati interesati, nu sa ii caute activ. Conform suportului de curs, ce particularitate a recrutarii contrazice aceasta abordare?',o:['Recrutarea este un proces bilateral, deci candidatii trebuie sa faca primul pas','Recrutarea are caracter activ: organizatia trebuie sa mentina permanent preocuparea pentru identificarea si atragerea de noi candidati','Recrutarea este o necesitate, nu o optiune, deci candidatii sunt obligati sa aplice','Recrutarea este un proces de comunicare, deci este suficient sa publici anunturi'],c:1,e:'Caracterul activ al recrutarii este prima particularitate identificata in suportul de curs: organizatiile trebuie sa mentina permanent preocuparea pentru identificarea, localizarea si atragerea de noi candidati. Asteptarea pasiva este ineficienta si contrazice principiile recrutarii moderne.'},
+  {tip:'Recrutare RU',q:'O companie publica un anunt de angajare vag si general pentru a atrage cat mai multi candidati. Ce problema fundamentala ridica aceasta abordare din perspectiva recrutarii eficiente?',o:['Anunturile vagi sunt mai accesibile si atrag mai multi candidati potriviti','Un anunt vag atrage candidati incompatibili si face selectia mai dificila si subiectiva; descrierea riguroasa a postului filtreaza candidatii de la inceput','Anunturile vagi sunt mai ieftine si justifica bugetul de recrutare','Vaguitatea anuntului protejeaza compania de discriminare'],c:1,e:'Suportul de curs propune inlocuirea anunturilor vagi cu profiluri eficiente ale pozitiei: cu cat descrierea este mai amanuntita si riguroasa, cu atat candidatii incompatibili nu vor aplica, reducand numarul de CV-uri irelevante. Vaguitatea creste numarul de aplicanti, dar scade calitatea lor si mareste efortul de selectie.'},
+  {tip:'Recrutare RU',q:'O companie face o analiza a pietei muncii inainte de a lansa o campanie de recrutare pentru ingineri specializati. La ce etapa din procesul de recrutare corespunde aceasta activitate si ce informatii poate oferi?',o:['Etapa 3: Analiza planului de resurse umane &mdash; pentru a stabili numarul de posturi vacante','Etapa 5: Analiza pietei muncii &mdash; disponibilitatea candidatilor, distributia geografica, nivelul de pregatire','Etapa 8: Redactarea anuntului &mdash; pentru a stabili ce cerinte sa includa in anunt','Etapa 1: Stabilirea bugetului &mdash; pentru a estima costul recrutarii'],c:1,e:'Etapa 5 din procesul de recrutare este analiza pietei muncii. Aceasta furnizeaza informatii despre disponibilitatea candidatilor, repartitia geografica, varsta, nivelul de pregatire si calificare. Este esentiala inainte de a alege sursele de recrutare, deoarece evidentiaza conditiile ofertei de forta de munca pe piata relevanta.'},
+  {tip:'Recrutare RU',q:'Un recrutor primeste 500 de CV-uri pentru un post, din care doar 20 sunt relevante. Directorul HR considera ca campania a fost un succes deoarece a primit multe aplicatii. Ce indicator din etapa 10 a recrutarii contrazice aceasta evaluare?',o:['Costul per candidatura: 500 de CV-uri inseamna costuri mari de procesare','Rata de raspuns: relevant este numarul candidatilor care corespund cerintelor postului, nu numarul total de aplicatii','Intervalul de timp: 500 de CV-uri inseamna un proces de recrutare prea lung','Numarul de angajari: succesul se masoara doar prin numarul de oameni angajati'],c:1,e:'Etapa 10 (evaluarea impactului) foloseste rata de raspuns, definita ca numarul de raspunsuri primite per sursa de recrutare. Dar eficienta inseamna nu doar volum, ci candidati care corespund cerintelor postului. 500 de CV-uri din care 20 sunt relevante indica un anunt slab calibrat sau o sursa nepotrivita, nu un succes al campaniei.'},
+  {tip:'Recrutare RU',q:'O companie a cheltuit 10.000 lei pe o campanie de recrutare si a primit 200 de candidaturi. Care este eficienta campaniei conform etapei 11 a recrutarii si cum se calculeaza?',o:['Eficienta este de 200%; calculata ca numarul de candidaturi impartit la cheltuieli','Costul per candidatura este 50 lei (10.000/200); campania este eficienta daca acest cost este justificat prin calitatea candidatilor primiti','Eficienta este negativa daca niciun candidat nu a fost angajat','Etapa 11 nu implica calcule; este o evaluare calitativa'],c:1,e:'Etapa 11 (evaluarea costurilor campaniei) calculeaza eficienta ca raport intre volumul cheltuielilor si numarul de raspunsuri primite per post: 10.000/200 = 50 lei per candidatura. Campania este eficienta daca acest cost este rezonabil raportat la calitatea si numarul candidatilor angajati in final.'},
+  {tip:'Recrutare RU',q:'Un manager HR sustine ca recrutarea este mai putin importanta decat selectia, deoarece selectia decide cine este angajat. Cum contrazice suportul de curs aceasta perspectiva?',o:['Selectia este mai importanta deoarece este ultima etapa si decide angajarea','Recrutarea este prioritara selectiei: eficienta selectiei este conditionata de capacitatea de a atrage candidati competitivi; fara recrutare buna, selectia nu poate fi eficienta','Ambele activitati sunt egale ca importanta','Recrutarea este mai importanta doar in companiile mari'],c:1,e:'Suportul de curs subliniaza explicit ca recrutarea este prioritara selectiei si integrarii: eficienta si eficacitatea procesului de selectie sunt conditionate de capacitatea organizatiei de a identifica, localiza si atrage cat mai multi candidati competitivi. Eforturile de selectie pot fi nule daca recrutarea nu a atras candidati potriviti.'},
+  {tip:'Recrutare RU',q:'O companie constata ca are dificultati in atragerea candidatilor. Consultantul HR recomanda elaborarea unui studiu specific. Ce trebuie sa evidentieze acest studiu conform suportului de curs?',o:['Studiul trebuie sa analizeze competitorii si strategiile lor de recrutare','Studiul trebuie sa evidentieze punctele tari si slabe ale organizatiei: reputatia, nivelul salariilor, facilitatile, conditiile de munca, perspectivele de promovare','Studiul trebuie sa analizeze legislatia muncii aplicabila','Studiul trebuie sa stabileasca bugetul optim de recrutare'],c:1,e:'Suportul de curs recomanda ca, in cazul dificultatilor de recrutare, organizatia sa elaboreze un studiu privind factorii de atractie si indepartare a candidatilor, care sa evidentieze: reputatia locala/nationala, nivelul salariilor si facilitatilor (participare la profit, prime, concedii, servicii sociale, conditii de munca, posibilitati de perfectionare, perspective de promovare).'},
+  {tip:'Recrutare RU',q:'Recrutarea este descrisa in suportul de curs ca o relatie biunivoca pe termen lung. Ce implica aceasta caracteristica pentru modul in care trebuie condusa recrutarea?',o:['Organizatia trebuie sa isi impuna conditiile, deoarece detine puterea de angajare','Organizatia trebuie sa efectueze recrutarea in limitele unui parteneriat real, fara a se manifesta dominant fata de candidati; chiar si candidatii neselectionati pot deveni candidati in viitor','Relatia biunivoca inseamna ca si candidatii pot intervieva organizatia','Recrutarea pe termen lung inseamna procese de recrutare care dureaza mai mult de 6 luni'],c:1,e:'Suportul de curs subliniaza ca recrutarea poate constitui o relatie biunivoca pe termen lung intre organizatie si candidat. Organizatia trebuie sa efectueze recrutarea fara a se manifesta ca entitate dominanta. Chiar daca un candidat nu este selectat acum, portofoliul creste si imaginea organizatiei ramane pozitiva, candidatii neselectionati putand beneficia de oportunitati viitoare.'},
+  {tip:'Recrutare RU',q:'Care dintre urmatoarele criterii NU este mentionat explicit in suportul de curs ca factor de alegere a surselor de recrutare?',o:['Costurile asociate fiecarei surse','Numarul de candidati care pot fi recrutati din sursa','Nivelul de satisfactie al angajatilor recrutati din sursa respectiva in primul an','Intervalul de timp necesar recrutarii din sursa'],c:2,e:'Suportul de curs identifica explicit urmatoarele criterii pentru alegerea surselor de recrutare: costurile, numarul de candidati, intervalul de timp, natura si complexitatea posturilor vacante si marimea companiei. Nivelul de satisfactie al angajatilor recrutati din sursa respectiva nu este mentionat ca criteriu de selectie a surselor.'},
+  {tip:'Recrutare RU',q:'Un candidat aplica la un post si, desi nu este selectat, primeste un raspuns politicos si este inclus in baza de date a companiei. Ce principiu al recrutarii ilustreaza aceasta practica?',o:['Eficienta costurilor: pastrarea candidatilor in baza de date reduce costurile recrutarilor viitoare','Recrutarea ca parteneriat real si relatie pe termen lung; portofoliul de personal selectionabil creste, iar imaginea organizatiei ramane pozitiva','Principiul nediscriminarii: toti candidatii trebuie tratati egal indiferent de rezultat','Modelul Hawk: masurarea costului per candidatura'],c:1,e:'Suportul de curs subliniaza ca organizatia trebuie sa efectueze recrutarea in limitele unui parteneriat real. Comunicarea directa sau indirecta este benefica ambilor parteneri: chiar daca recrutarea nu conduce la selectie, portofoliul de personal selectionabil se mareste, candidatii neselectionati pot beneficia de o noua oportunitate, iar imaginea organizatiei ramane pozitiva.'},
+  {tip:'Recrutare RU',q:'Modelul lui Wanous pentru evaluarea succesului recrutarii si modelul lui Hawk au fiecare un punct slab specific. Care este diferenta esentiala dintre limitarile celor doua modele?',o:['Wanous nu masoara costurile si beneficiile; Hawk nu masoara efectele pe termen lung asupra performantei individuale','Wanous este prea complex; Hawk este prea simplu','Wanous se aplica doar recrutarii interne; Hawk doar recrutarii externe','Ambele modele au aceleasi limitari'],c:0,e:'Suportul de curs precizeaza clar: Modelul Wanous ofera perspectiva pe termen scurt si lung dar nu poate da informatii cantitative referitoare la costuri si beneficii ale recrutarii. Modelul Hawk face posibila estimarea costurilor si beneficiilor, dar este un model pe termen scurt si nu ofera perspectiva masurarii efectelor recrutarii asupra performantei individuale si colective.'},
+  {tip:'Recrutare RU',q:'Specificatia postului mentionata in fisa de post joaca un rol important in recrutare. Ce rol specific are, conform suportului de curs?',o:['Este folosita exclusiv pentru calculul salariului postului vacant','Aspectele mentionate in specificatia postului devin criterii de recrutare si ulterior de selectie a candidatilor','Specificatia postului este relevanta doar in etapa de selectie, nu in recrutare','Specificatia postului este utilizata pentru evaluarea performantelor angajatilor existenti'],c:1,e:'Suportul de curs subliniaza ca analiza si proiectarea posturilor furnizeaza informatii extrem de importante in procesul de recrutare: aspectele mentionate in fisa postului, in capitolul specificatia postului, devin criterii de recrutare si, ulterior, de selectie a candidatilor pentru un anumit post. Specificatia postului este documentul care leaga planificarea de recrutare si selectie.'},
+  {tip:'Perspectiva contemporana',q:'O companie primeste 800 de CV-uri pentru un post de programator si foloseste un sistem ATS (Applicant Tracking System) care filtreaza automat CV-urile dupa cuvinte cheie. Ramane cu 50 de candidati. Un recrutor observa ca mai multi candidati valorosi cu experienta practica demonstrabila au fost eliminati deoarece nu aveau titluri universitare mentionate explicit. Ce problema critica ridica aceasta situatie?',o:['Sistemul ATS este defect si trebuie inlocuit cu unul mai nou','Algoritmii de filtrare pot reproduce si amplifica bias-urile din criteriile de recrutare, eliminand candidati valorosi care nu si-au formatat CV-ul dupa pattern-ul asteptat de sistem','Candidatii eliminati nu meritau sa avanseze daca nu aveau titluri universitare','Recrutarea online este mai putin eficienta decat metodele traditionale'],c:1,e:'Sistemele ATS si algoritmii de filtrare ridica o provocare moderna a recrutarii: filtrarea automata poate elimina candidati valorosi care nu si-au optimizat CV-ul pentru sistem sau care nu indeplinesc criterii formale (diplome) dar au competente reale. Aceasta este o manifestare moderna a problemei semnalate in suportul de curs: anunturile vagi sau criteriile prost calibrate atrag sau elimina candidati gresit. Solutia moderna este completarea filtrarii automate cu evaluari de competente practice.'},
+  {tip:'Perspectiva contemporana',q:'O companie din Romania angajeaza remote un specialist DevOps si descoperpe ca concureaza cu oferte de la companii din Germania si Olanda care ofera salarii de 3-4 ori mai mari. Ce etapa din procesul de recrutare trebuie regandita fundamental in acest context?',o:['Etapa 8: redactarea anuntului de angajare, pentru a fi mai atractiv','Etapa 5: analiza pietei muncii, care trebuie sa includa acum piata globala pentru rolurile remote, nu doar piata locala','Etapa 1: bugetul de recrutare, care trebuie crescut pentru a acoperi costurile internationale','Etapa 7: perioada de recrutare, care trebuie extinsa pentru a atrage candidati internationali'],c:1,e:'Etapa 5 (analiza pietei muncii) a fost conceputa in suportul de curs ca analiza a pietei locale. Pentru rolurile digitalizabile si remote, piata muncii este acum globala: un specialist IT din Romania are acces la oferte din intreaga Europa fara sa se mute. Analiza pietei muncii trebuie extinsa sa includa benchmarking international al salariilor si conditiilor, altfel campania de recrutare va fi calibrata gresit fata de concurenta reala.'}
+];
+
+var PSURSE=[
+  {tip:'Surse interne',q:'O companie are un post vacant de manager de proiect. Directorul general recomanda sa fie angajat cineva din exterior pentru suflu proaspat. Directorul HR propune promovarea unui senior din echipa existenta. Ce avantaje ale sursei interne ar trebui sa sublinieze directorul HR?',o:['Recrutarea interna este intotdeauna mai ieftina si mai rapida','Compania cunoaste mai bine candidatul intern (puncte forte si slabe), integrarea este mai rapida, motivarea echipei creste prin promovare, costurile de recrutare sunt reduse','Sursele interne elimina complet riscul de selectie gresita','Sursele interne sunt obligatorii prin lege inainte de a apela la surse externe'],c:1,e:'Suportul de curs identifica multiple avantaje ale recrutarii interne: cunoasterea mai buna a candidatilor (puncte forte si slabe), timp de integrare mai redus, atragere mai facila, cresterea motivarii si loialitatii angajatilor, costuri de recrutare reduse si probabilitate redusa de decizii eronate. Acestea sunt argumentele concrete pe care directorul HR ar trebui sa le avanseze.'},
+  {tip:'Surse interne',q:'Intr-o companie de productie, seful departamentului A promoveaza un angajat in care are incredere, desi exista candidati mai calificati in alte departamente. Ce dezavantaj al recrutarii interne ilustreaza aceasta situatie?',o:['Efectul de unda: promovarea genereaza un alt post vacant','Probabilitatea ridicata de favoritism, care poate genera conflicte','Candidatul intern nu cunoaste cultura organizationala a departamentului','Recrutarea interna nu permite corectarea practicilor discriminatorii'],c:1,e:'Suportul de curs identifica favoritismul ca unul dintre dezavantajele surselor interne de recrutare: probabilitate ridicata de manifestare a favoritismului, care poate genera aparitia unor conflicte. Situatia descrisa, in care criteriul de selectie este increderea personala, nu competenta comparativa, este un exemplu clasic de favoritism in promovare.'},
+  {tip:'Surse externe',q:'O firma de consultanta IT are nevoie urgenta de 15 specialisti in cloud computing, o tehnologie relativ noua. Niciun angajat intern nu are aceasta specializare. Ce sursa de recrutare este cea mai potrivita si de ce?',o:['Sursa interna: promovarea angajatilor existenti si trimiterea lor la training','Sursa externa: permite identificarea si atragerea unui numar mare de candidati specializati de pe piata muncii, aducand si suflu proaspat cu cunostinte noi','Reangajarea fostilor angajati: au deja experienta in firma','Transferul din filiale: mentine costurile reduse'],c:1,e:'Suportul de curs subliniaza ca sursele externe sunt potrivite cand compania nu isi poate acoperi necesarul din surse interne (lipsa personalului calificat, complexitate ridicata a posturilor). Avantajele externe relevante: numarul mare de candidati potentiali, suflu proaspat cu idei si cunostinte noi, satisfacerea nevoilor suplimentare de personal. In cazul unei tehnologii noi nereprezentate intern, sursa externa este singura optiune.'},
+  {tip:'Surse externe',q:'O companie angajeaza o persoana din exterior pentru un post de team leader, desi mai multi angajati seniori aspirau la aceasta pozitie. Ce consecinta a recrutarii externe, mentionata in suportul de curs, este de asteptat?',o:['Noii angajati externi sunt intotdeauna mai productivi decat cei interni promovati','Manifestarea unor nemultumiri din partea angajatilor interni care se considera nedreptajiti','Costurile de integrare vor fi reduse deoarece persoana externa are experienta','Recrutarea externa este ilegala daca exista candidati interni calificati'],c:1,e:'Suportul de curs identifica explicit ca unul dintre dezavantajele surselor externe este manifestarea unor nemultumiri din partea angajatilor companiei, care se considera nedreptajiti in situatia angajarii de personal din surse externe organizatiei. Aceasta este o consecinta previzibila si trebuie gestionata de HR prin comunicare transparenta a criteriilor de selectie.'},
+  {tip:'Metode recrutare',q:'O companie cauta un director financiar cu experienta specifica in industria farmaceutica. Are nevoie de candidati de top care nu isi cauta activ un nou loc de munca. Ce metoda de recrutare este cea mai potrivita?',o:['Publicarea unui anunt pe un portal de joburi online','Participarea la un targ de joburi pentru a intalni candidati','Colaborarea cu o agentie de recrutare specializata (headhunting) care poate contacta candidati pasivi','Postarea pe retelele de socializare ale companiei'],c:2,e:'Pentru pozitii de top cu cerinte specifice, agentiile de recrutare specializate (inclusiv headhunters) pot identifica si aborda candidati care nu sunt in cautare activa de job. Suportul de curs include colaborarea cu agentiile de recrutare ca una dintre principalele metode. Pentru o pozitie cu cerinte foarte specifice (industria farmaceutica + nivel director), o agentie specializata are accesul si expertiza necesare.'},
+  {tip:'Metode recrutare',q:'O companie doreste sa angajeze absolventi proaspeti de facultate pentru un program de internship. Ce sursa si metoda de recrutare externa este cea mai eficienta conform suportului de curs?',o:['Anunturi in ziare nationale: acoperire larga pentru tineri absolventi','Instituciile de invatamant ca sursa externa si targurile de joburi ca metoda, pentru contact direct cu absolventii','Recomandari de la angajatii existenti: cei mai de incredere candidati','Reangajarea fostilor angajati: au deja experienta in firma'],c:1,e:'Suportul de curs identifica institutiile de invatamant ca sursa externa si targurile de joburi ca metoda de recrutare. Combinatia institutii de invatamant + targuri de joburi este cea mai potrivita pentru absolventi: ofera contact direct, posibilitatea de prezentare a companiei si interactiune fata in fata cu potentialii candidati, exact profilul cautat.'},
+  {tip:'Surse interne',q:'O companie cu 5 filiale in tara vrea sa ocupe un post vacant de manager regional. Directorul HR propune sa caute candidati in randul angajatilor din toate filialele. Ce tip de recrutare este aceasta?',o:['Recrutare externa, deoarece candidatii nu lucreaza in sediul central','Recrutare interna, deoarece angajatii filialelor reprezinta tot o sursa interna de recrutare','Recrutare mixta: interna pentru filiale, externa pentru sediul central','Recrutare prin transfer, care este o categorie separata de surse interne si externe'],c:1,e:'Suportul de curs precizeaza explicit: in cazul companiilor care detin mai multe filiale, angajatii respectivelor filiale reprezinta tot o sursa interna de recrutare a resurselor umane. Chiar daca candidatii nu lucreaza fizic in locatia postului vacant, ei sunt angajati ai aceleasi organizatii.'},
+  {tip:'Metode recrutare',q:'Dupa incheierea unui ciclu de recrutare, 3 dintre candidatii respinsi au un profil foarte bun dar nu existau posturi potrivite la momentul respectiv. Ce practica recomandata in suportul de curs permite valorificarea acestor candidati in viitor?',o:['Publicarea unui nou anunt de angajare cand apare un post potrivit','Includerea candidatilor in propria baza de date, urmand sa fie contactati cand apar posturi corespunzatoare','Trimiterea candidatilor catre competitori care au posturi potrivite','Solicitarea candidatilor sa reaplice prin procedura standard'],c:1,e:'Suportul de curs mentioneaza explicit utilizarea propriei baze de date ca metoda de recrutare. De asemenea, subliniaza ca angajatorii includ in propria baza de date candidatii respinsi, urmand pe viitor sa ii aiba in vedere in scopul angajarii pe posturi corespunzatoare. Aceasta practica reduce costurile viitoarelor recrutari si pastreaza imaginea pozitiva a organizatiei.'},
+  {tip:'Surse externe',q:'O companie din industria auto trebuie sa angajeze rapid 50 de operatori de productie. Principalele surse externe disponibile sunt: portaluri online de joburi, oficii de plasare a fortei de munca si un targ de joburi local. Care combinatie este cea mai eficienta pentru a atinge rapid numarul necesar de candidati?',o:['Exclusiv portaluri online, deoarece au cea mai mare acoperire','Oficiile de plasare a fortei de munca, deoarece au candidati pre-selectati disponibili imediat','Combinatia portale online + oficii de plasare, pentru acoperire maxima si acces la candidati disponibili imediat','Exclusiv recrutare interna prin transfer de la alte departamente'],c:2,e:'Suportul de curs mentioneaza ca organizatia poate apela simultan la mai multe surse de recrutare. Pentru un volum mare de angajari in timp scurt, combinarea surselor externe maximizeaza numarul de candidati: portalurile online asigura acoperire larga, iar oficiile de plasare a fortei de munca au candidati disponibili (persoane in cautarea unui loc de munca) care pot raspunde rapid.'},
+  {tip:'Metode recrutare',q:'Un recrutor primeste 300 de CV-uri standardizate pentru un post de project manager si constata ca este aproape imposibil sa diferentieze candidatii relevanti. Ce solutie propune suportul de curs pentru a imbunatati calitatea procesului de recrutare?',o:['Introducerea unui test de personalitate obligatoriu ca filtru initial','Inlocuirea sau completarea CV-ului cu un profil eficient al pozitiei care descrie riguros jobul, profilul candidatului ideal, responsabilitatile si oportunitatile de cariera','Reducerea numarului de candidati prin limitarea perioadei de aplicare la 48 de ore','Utilizarea exclusiva a referintelor pentru a evita CV-urile'],c:1,e:'Suportul de curs propune inlocuirea anuntului vag cu un profil eficient al pozitiei: o descriere amanuntita si riguroasa a jobului, profilului candidatului ideal, responsabilitatilor si oportunitatilor. Rezultatul: doar candidatii compatibili cu profilul vor aplica, reducand semnificativ numarul de CV-uri irelevante si permitand evaluari mai aplicate si documentate.'},
+  {tip:'Surse externe',q:'O companie are politica de a angaja exclusiv prin recrutare interna. Un audit HR constata ca aceasta practica a generat o lipsa de diversitate si practici discriminatorii neintentionate. Ce avantaj al recrutarii externe adreseaza direct aceasta problema?',o:['Recrutarea externa este mai rapida si reduce costurile per angajat','Recrutarea externa permite corectarea practicilor discriminatorii si aducerea de idei si viziuni noi','Recrutarea externa elimina riscul de favoritism intern','Recrutarea externa este obligatorie dupa un anumit numar de angajari interne consecutive'],c:1,e:'Suportul de curs identifica explicit ca unul dintre avantajele surselor externe de recrutare este ca permite corectarea practicilor discriminatorii. Recrutarea exclusiv interna poate perpetua aceleasi tipare si poate limita diversitatea. Sursa externa aduce, de asemenea, suflu proaspat cu idei, cunostinte si viziuni noi asupra activitatilor organizatiei.'},
+  {tip:'Surse interne',q:'Un angajat performant din departamentul de vanzari este promovat ca manager al aceluiasi departament. Dupa 6 luni, noul manager are dificultati in rolul de leadership si rezultatele echipei scad. Ce dezavantaj al recrutarii interne ilustreaza aceasta situatie?',o:['Efectul de unda: postul de agent de vanzari ramas vacant nu a fost ocupat','Este posibil ca unii angajati sa nu faca fata noului post pe care au fost promovati (Principiul lui Peter)','Favoritismul: a fost promovat dintr-o relatie personala cu seful','Lipsa de suflu proaspat: un candidat extern ar fi adus perspective noi'],c:1,e:'Suportul de curs identifica explicit ca unul dintre dezavantajele surselor interne este posibilitatea ca unii angajati sa nu faca fata noului post pe care au fost promovati. Competenta tehnica excelenta nu garanteaza competenta manageriala. Aceasta situatie este cunoscuta in literatura ca Principiul lui Peter.'}
+];
+
+var PSEL=[
+  {tip:'Selectia RU',q:'Un candidat a trecut cu succes prin interviul preliminar si testele de selectie. Urmatoarea etapa este verificarea referintelor. Ce informatii urmareste aceasta etapa conform suportului de curs?',o:['Verificarea identitatii candidatului si a actelor oficiale','Informatii despre locurile de munca anterioare, comportamentul la locul de munca, nivelul de pregatire si rezultatele obtinute','Evaluarea starii de sanatate a candidatului pentru compatibilitate cu postul','Obtinerea acordului candidatului pentru contractul de munca'],c:1,e:'Etapa 5 a selectiei (verificarea referintelor) urmareste informatii referitoare la locurile de munca anterioare ale candidatului, comportamentul la locul de munca anterior, nivelul de pregatire profesionala, rezultatele obtinute la locul de munca anterior si comportamentul social. Aceasta etapa valideaza informatiile din CV si ofera perspectiva angajatorilor anteriori.'},
+  {tip:'Selectia RU',q:'O companie doreste sa evalueze cum se comporta un candidat in situatii de presiune, in cadrul unui grup si capacitatea de a contribui la decizii colective. Ce tip de test de selectie este cel mai potrivit?',o:['Test de inteligenta: masoara aptitudinea generala de a face fata unor situatii diverse','Test de personalitate: stabileste trasaturile direct legate de succes','Testarea comportamentului de grup: evalueaza comportamentul in sedinte de grup, comunicarea si contributia la comportamentele de grup','Test de cunostinte: verifica nivelul de pregatire teoretica'],c:2,e:'Suportul de curs identifica testarea comportamentului de grup ca tipul de test utilizat pentru evaluarea comportamentului candidatului in cadrul unor sedinte de grup, modul de comunicare si contributia la generarea comportamentelor de grup. Aceste teste sunt specifice pozitiilor care necesita lucru in echipa si luare de decizii colective.'},
+  {tip:'CV si Interviu',q:'Un candidat are o cariera de 15 ani in care a lucrat in 4 industrii diferite, pe 6 roluri distincte, cu realizari notabile in fiecare. Ce tip de CV este mai potrivit si de ce?',o:['CV cronologic: prezinta clar traseul profesional de la ultimul job la primul','CV functional: accentueaza realizarile si activitatile; recomandat pentru activitate profesionala bogata si diversa pe diferite posturi si domenii','CV combinat: amesteca informatii cronologice si functionale','Nu conteaza tipul de CV; conteaza continutul'],c:1,e:'Suportul de curs precizeaza ca CV-ul functional accentueaza realizarile sau activitatile anterioare ale candidatului si este recomandat a fi utilizat de persoanele care au o activitate profesionala anterioara foarte bogata si chiar pe diverse posturi si domenii de activitate. Profilul descris (15 ani, 4 industrii, 6 roluri) se incadreaza perfect in aceasta recomandare.'},
+  {tip:'Selectia RU',q:'Dupa finalizarea procesului de selectie, 3 candidati nu au fost selectati pentru postul vizat, dar au performante bune. Conform suportului de curs, ce ar trebui sa faca angajatorul cu acesti candidati?',o:['Sa ii informeze politicos ca postul a fost ocupat si sa inchida dosarele','Sa ii includa in propria baza de date, urmand sa ii aiba in vedere pentru posturi viitoare corespunzatoare','Sa le ofere automat un alt post disponibil in companie','Sa le solicite sa reaplice la urmatoarea runda de recrutare'],c:1,e:'Suportul de curs precizeaza ca angajatorii ii includ pe candidatii respinsi in propria baza de date, urmand pe viitor sa ii aiba in vedere in scopul angajarii pe posturi corespunzatoare nivelului de calificare, experienta sau pregatire profesionala. Aceasta practica mentine relatia pozitiva cu candidatii si reduce costurile recrutarilor viitoare.'},
+  {tip:'CV si Interviu',q:'Un manager de selectie foloseste exclusiv intrebari inchise (cu raspuns Da/Nu) pe parcursul interviului. Ce problema fundamentala ridica aceasta abordare?',o:['Intrebarile inchise sunt ilegale in procesul de selectie','Intrebarile inchise nu permit candidatilor sa isi argumenteze raspunsurile si nu ofera informatii suficiente pentru diferentierea candidatilor','Intrebarile inchise favorizeaza candidatii extravertiti','Intrebarile inchise sunt potrivite doar pentru pozitii tehnice, nu pentru management'],c:1,e:'Suportul de curs identifica mai multe tipuri de intrebari utilizate in interviu: inchise, deschise, de verificare si cu raspuns implicit. Intrebarile deschise permit candidatilor sa exprime o parere sau sa explice cum ar reactiona in situatii specifice, oferind informatii calitative pentru evaluare. Limitarea la intrebari inchise reduce drastic cantitatea si calitatea informatiilor obtinute despre candidat.'},
+  {tip:'Selectia RU',q:'Un candidat finalizeaza interviul final cu succes. Care este urmatoarea etapa din procesul de selectie si ce document se emite?',o:['Verificarea referintelor: se contacteaza angajatorii anteriori','Decizia de angajare si emiterea ofertei de angajare care ii va fi adusa la cunostinta candidatului','Instalarea pe post: semnarea contractului individual de munca','Examenul medical: verificarea aptitudinii pentru post'],c:1,e:'Conform ordinii etapelor selectiei din suportul de curs, dupa interviul final (etapa 7) urmeaza decizia de angajare (etapa 8): in functie de numarul posturilor vacante, se intocmeste oferta de angajare care le va fi adusa la cunostinta candidatilor selectati. Instalarea pe post (semnarea contractului) este etapa 9, ulterioara ofertei.'},
+  {tip:'CV si Interviu',q:'Scrisoarea de intentie insoteste CV-ul trimis unui angajator. Care este rolul sau specific, distinct de CV?',o:['Prezinta in detaliu experienta profesionala si educatia candidatului','Exprima motivele pentru care candidatul intentioneaza sa se angajeze pe postul specific pentru care a fost publicata oferta','Inlocuieste CV-ul pentru candidatii cu putina experienta','Contine referintele profesionale ale candidatului'],c:1,e:'Suportul de curs precizeaza ca scrisoarea de intentie insoteste CV-ul si exprima motivele pentru care un candidat intentioneaza sa se angajeze pe postul pentru care a fost publicata oferta de angajare. Spre deosebire de CV (care prezinta datele biografice si profesionale), scrisoarea de intentie exprima motivatia specifica si compatibilitatea candidatului cu postul respectiv.'},
+  {tip:'Selectia RU',q:'Un recrutor trebuie sa trieze rapid 400 de candidaturi pentru un post tehnic, iar informatiile din CV nu sunt suficiente pentru departajare. Ce tip de test de selectie recomanda suportul de curs in aceasta situatie?',o:['Teste de personalitate, pentru a identifica trasaturile legate de succes','Teste de cunostinte, utilizate atunci cand este necesara o triere masiva a candidatilor si informatiile din CV nu sunt suficiente','Testarea comportamentului de grup, pentru a evalua colaborarea','Teste de inteligenta, pentru a evalua aptitudinile generale'],c:1,e:'Suportul de curs precizeaza ca testele de cunostinte se utilizeaza atunci cand este necesara o triere masiva a candidatilor, iar informatiile cuprinse in CV nu sunt suficiente pentru departajare. Aceasta este exact situatia descrisa: 400 de candidaturi cu CV-uri insuficient diferentiatoare pentru un post tehnic ce necesita cunostinte specifice.'},
+  {tip:'Perspectiva contemporana',q:'O companie elimina cerinta de diploma universitara din anuntul de recrutare pentru roluri de programator si inginer, evaluand in schimb candidatii prin teste practice de competente si proiecte demonstrabile. Ce tendinta moderna ilustreaza aceasta decizie si cum se raporteaza la etapele selectiei din suportul de curs?',o:['Compania face o greseala; diploma universitara garanteaza calitatea candidatilor','Skills-based hiring: deplasarea accentului de la credentialele formale la competentele demonstrabile; in etapele selectiei, testele de abilitati specifice si testele de cunostinte capata importanta crescuta fata de filtrarea dupa diplome','Compania isi reduce costurile de selectie eliminand o etapa de filtrare','Aceasta abordare este potrivita doar pentru companiile tech, nu si pentru alte industrii'],c:1,e:'Skills-based hiring este una dintre tendintele majore post-2020: companii ca Google, IBM, Apple au eliminat cerinta de diploma pentru multe roluri. In termenii suportului de curs, aceasta schimbare pune accentul pe testele de abilitati specifice si testele de cunostinte (etapa 4 a selectiei) si pe verificarea realizarilor concrete (portofolii, proiecte), in detrimentul filtrarii initiale pe credentiale formale. Selectia devine mai echitabila si mai predictiva pentru performanta efectiva.'}
+];
+
+var PQUIZ=[
+  {q:'Recrutarea reprezinta, conform suportului de curs:',o:['Exclusiv activitatea de publicare a anunturilor de angajare','Activitatea de identificare si atragere a persoanelor cu pregatirea, experienta si caracteristicile corespunzatoare posturilor vacante','Activitatea de alegere a celui mai potrivit candidat din cei recrutati','Procesul de integrare a noilor angajati la locul de munca'],c:1,e:'Recrutarea reprezinta activitatea de identificare si atragere in organizatie a persoanelor care au pregatirea, experienta de viata si profesionala, motivarea si caracteristicile psihologice corespunzatoare caracteristicilor functionale ale posturilor vacante.'},
+  {q:'Care este scopul principal al activitatii de recrutare a resurselor umane?',o:['Reducerea costurilor cu salariile prin angajarea celor mai ieftini candidati','Identificarea si dezvoltarea surselor din care organizatia poate atrage un numar cat mai mare de candidati pentru posturile vacante','Evaluarea performantelor angajatilor existenti','Elaborarea fiselor de post pentru pozitiile vacante'],c:1,e:'Scopul activitatii de recrutare este identificarea si dezvoltarea surselor de unde organizatia poate atrage un numar cat mai mare de candidati, in vederea ocuparii posturilor vacante.'},
+  {q:'Ce reprezinta rata de raspuns in evaluarea campaniei de recrutare?',o:['Procentul de candidati care accepta oferta de angajare','Numarul de raspunsuri primite pentru un anunt de angajare publicat, pe fiecare sursa de recrutare','Raportul dintre candidatii acceptati si cei respinsi','Viteza cu care HR-ul raspunde candidatilor'],c:1,e:'Rata de raspuns este definita ca numarul de raspunsuri primite pentru un anunt de angajare publicat, pe fiecare sursa de recrutare. Este indicatorul cu ajutorul caruia se poate cuantifica impactul unui anunt la nivelul candidatilor.'},
+  {q:'Ce reprezinta efectul de unda in contextul recrutarii interne?',o:['Impactul pozitiv al promovarii asupra motivatiei intregii echipe','Faptul ca un post vacant ocupat prin promovare determina aparitia unui alt post vacant','Raspandirea informatiei despre postul vacant prin recomandari interne','Cresterea performantei echipei dupa o promovare'],c:1,e:'Efectul de unda este unul dintre dezavantajele surselor interne: promovarea genereaza aparitia unui efect de unda, deoarece un post vacant ocupat prin promovare determina aparitia unui alt post vacant (cel al angajatului promovat).'},
+  {q:'Selectia resurselor umane consta in:',o:['Identificarea si atragerea candidatilor de pe piata muncii','Alegerea, potrivit anumitor criterii, a celui mai competitiv sau potrivit candidat pentru ocuparea unui anumit post','Integrarea noilor angajati la locul de munca','Evaluarea performantelor candidatilor dupa angajare'],c:1,e:'Selectia reprezinta acea activitate a managementului resurselor umane care consta in alegerea, potrivit anumitor criterii, a celui mai competitiv sau mai potrivit candidat pentru ocuparea unui anumit post (Manolescu, 2007).'},
+  {q:'CV-ul functional este recomandat:',o:['Tinerilor absolventi cu putina experienta profesionala','Candidatilor care doresc sa isi schimbe domeniul de activitate','Persoanelor cu activitate profesionala bogata si diversa, pe diverse posturi si domenii','Candidatilor care aplica pentru pozitii tehnice specifice'],c:2,e:'CV-ul functional accentueaza realizarile sau activitatile anterioare ale candidatului si este recomandat a fi utilizat de persoanele sau candidatii care au o activitate profesionala anterioara foarte bogata si chiar pe diverse posturi si domenii de activitate.'},
+  {q:'Care este principala diferenta intre modelul Wanous si modelul Hawk de evaluare a recrutarii?',o:['Wanous evalueaza recrutarea externa; Hawk evalueaza recrutarea interna','Wanous ofera perspectiva pe termen lung dar nu masoara costuri/beneficii; Hawk masoara costuri/beneficii dar nu efectele pe termen lung','Wanous este utilizat in companii mici; Hawk in companii mari','Nu exista diferente semnificative intre cele doua modele'],c:1,e:'Modelul Wanous ofera perspectiva pe termen scurt si lung dar nu poate da informatii cantitative referitoare la costuri si beneficii. Modelul Hawk face posibila estimarea costurilor si beneficiilor, dar este un model pe termen scurt si nu ofera perspectiva masurarii efectelor asupra performantei individuale si colective.'},
+  {q:'In procesul de selectie, dupa interviul final urmeaza:',o:['Verificarea referintelor','Examenul medical','Decizia de angajare si emiterea ofertei','Instalarea pe post'],c:2,e:'Conform ordinii etapelor selectiei din suportul de curs: etapa 7 este interviul final, etapa 8 este decizia de angajare (in functie de numarul posturilor vacante se intocmeste oferta de angajare), iar etapa 9 este instalarea pe post (semnarea contractului individual de munca).'},
+  {q:'Care particularitate a recrutarii explica de ce o companie care nu ofera salarii competitive si oportunitati de avansare va intampina dificultati in atragerea candidatilor?',o:['Recrutarea este un proces managerial complex, deci depinde de buget','Recrutarea este un proces bilateral: si organizatia trebuie sa ofere conditii atractive candidatilor, nu doar sa impuna cerinte','Recrutarea este o necesitate, nu o optiune, deci candidatii sunt obligati sa accepte conditiile','Recrutarea are caracter activ, deci efortul organizatiei compenseaza conditiile oferite'],c:1,e:'Caracterul bilateral (bidirecțional) al recrutarii: pe de o parte candidatii trebuie sa corespunda exigentelor companiei, iar pe de alta parte companiile trebuie sa ofere candidatilor conditii de munca corespunzatoare si un nivel al remuneratiilor atractiv. Organizatia care nu ofera conditii competitive nu poate atrage candidati buni, indiferent de efortul de recrutare.'},
+  {q:'Testele de inteligenta in selectie sunt utilizate mai ales:',o:['Pentru pozitii de top management, unde inteligenta este cea mai importanta','In cazul angajarii persoanelor tinere, pentru evaluarea aptitudinii de a desfasura o gama larga de activitati','Pentru trierile masive de candidati, deoarece sunt rapide','Exclusiv in selectia pentru pozitii tehnice'],c:1,e:'Suportul de curs precizeaza ca testele de inteligenta evalueaza aptitudinea unei persoane de a desfasura o gama larga de activitati, intr-o diversitate de situatii, si sunt utilizate mai ales in cazul angajarii persoanelor tinere.'},
+  {q:'Ce criterii sunt mentionate explicit in suportul de curs pentru alegerea surselor de recrutare?',o:['Reputatia sursei, numarul de candidati si satisfactia angajatilor recrutati','Costurile, numarul de candidati, intervalul de timp, natura postului si marimea companiei','Costurile, disponibilitatea geografica si nivelul de automatizare al sursei','Numarul de candidati, rata de acceptare a ofertelor si costul per angajat'],c:1,e:'Suportul de curs identifica explicit urmatoarele criterii pentru identificarea si selectarea surselor de recrutare: costurile, numarul de candidati care pot fi recrutati, intervalul de timp in care pot fi recrutati candidatii, natura si complexitatea posturilor vacante si marimea companiei solicitante sau beneficiare.'},
+  {q:'Recrutarea este descrisa in suportul de curs ca o "necesitate, nu o optiune". Ce argument sustine aceasta afirmatie?',o:['Legislatia muncii obliga companiile sa recruteze activ','Lipsa salariatilor competenti conditioneaza succesul oricarei companii pe piata, limitandu-l','Recrutarea este mai ieftina decat mentinerea angajatilor existenti','Recrutarea activa reduce concurenta pe piata muncii'],c:1,e:'Suportul de curs precizeaza: a devenit din ce in ce mai evident faptul ca lipsa unor salariati competenti conditioneaza succesul oricarei companii pe piata, limitandu-l. Caracterul activ al recrutarii este impus tocmai de nevoia organizatiilor de a dispune de oameni competitivi. Aceasta face recrutarea o necesitate organizationala, nu o activitate optionala.'},
+  {q:'Interviul de selectie are ca scop principal:',o:['Evaluarea aspectului fizic si a prezentarii candidatului','Identificarea informatiilor din CV, obtinerea de informatii suplimentare, compararea candidatilor si alegerea celui mai bun','Negocierea salariului cu candidatul ales','Prezentarea conditiilor de munca si a regulamentului intern'],c:1,e:'Interviul reprezinta un dialog derulat in scopul identificarii informatiilor prezentate in CV si scrisoarea de intentie, obtinerii unor informatii suplimentare cu privire la fiecare candidat, compararii candidatilor, clarificarii unor incoerente si alegerii celui mai bun candidat.'},
+  {q:'Ce se intampla cu candidatii respinsi la finalul procesului de selectie, conform practicii recomandate in suportul de curs?',o:['Sunt informati despre respingere si dosarele lor sunt distruse conform GDPR','Sunt inclusi in baza de date a angajatorului pentru oportunitati viitoare corespunzatoare profilului lor','Sunt redirectionati automat catre alte companii partenere','Primesc un feedback detaliat despre motivele respingerii'],c:1,e:'Suportul de curs precizeaza ca angajatorii ii includ pe candidatii care nu au parcurs cu succes procesul de selectie in propria baza de date, urmand pe viitor sa ii aiba in vedere in scopul angajarii pe posturi corespunzatoare nivelului de calificare, experienta sau pregatire profesionala al respectivilor candidati.'},
+  {q:'Care este relatia dintre recrutare si selectie conform suportului de curs?',o:['Selectia precede recrutarea: intai selectezi criteriile, apoi recrutezi candidatii','Recrutarea este prioritara selectiei: eficienta selectiei depinde de calitatea recrutarii','Recrutarea si selectia sunt activitati independente, derulate simultan','Selectia este mai importanta deoarece decide cine este angajat'],c:1,e:'Suportul de curs subliniaza explicit ca recrutarea este prioritara selectiei: eficienta si eficacitatea procesului de selectie sunt conditionate de capacitatea organizatiei de a identifica, localiza si atrage cat mai multi candidati competitivi. Fara o recrutare eficienta, selectia nu poate produce rezultate bune.'},
+  {q:'Costul campaniei de recrutare per candidatura se calculeaza ca:',o:['Salariul recruterului impartit la numarul de zile ale campaniei','Raportul dintre volumul cheltuielilor efectuate si numarul de raspunsuri primite din partea candidatilor','Costul anuntului de angajare impartit la numarul de posturi vacante','Bugetul total de HR impartit la numarul de angajari anuale'],c:1,e:'Suportul de curs precizeaza ca eficienta unei campanii de recrutare se evalueaza sub forma costurilor pe fiecare candidatura primita, calculat ca raport intre volumul cheltuielilor efectuate si numarul de raspunsuri primite din partea candidatilor pentru fiecare post.'}
+];
+
+var COD_TRAIN='aplicatii2026';var COD_EXAM='exam2024';
+var MAX_TRAIN=7;var MAX_EXAM=5;
+
+var ST={done:{recrutare:false,surse:false,selectie:false,quiz:false},student:{n:'',g:''},seed:0,modAcces:'',sel:{recrutare:[],surse:[],selectie:[],quiz:[]},scores:{recrutare:0,surse:0,selectie:0,quiz:0},progress:{recrutare:0,surse:0,selectie:0,quiz:0},answers:{recrutare:[],surse:[],selectie:[],quiz:[]},shuffled:{}};
+
+function mkRng(s){var seed=s;return function(){seed=(seed*1664525+1013904223)&0xffffffff;return(seed>>>0)/0xffffffff;};}
+function shuffle(arr,r){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(r()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pickN(pool,n,r){var idx=[];for(var i=0;i<pool.length;i++)idx.push(i);return shuffle(idx,r).slice(0,n);}
+function mkSeed(n,g){var h=0,s=n+g+Date.now().toString().slice(-4);for(var i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return Math.abs(h);}
+
+function buildSelections(seed){var r=mkRng(seed);ST.sel.recrutare=pickN(PREC,6,r);ST.sel.surse=pickN(PSURSE,6,r);ST.sel.selectie=pickN(PSEL,4,r);ST.sel.quiz=pickN(PQUIZ,8,r);}
+function getPool(s){if(s==='recrutare')return PREC;if(s==='surse')return PSURSE;if(s==='selectie')return PSEL;return PQUIZ;}
+
+function renderSection(secId,idx){
+  var pool=getPool(secId);var selArr=ST.sel[secId];var n=selArr.length;
+  var nextFnMap={recrutare:'nextRec',surse:'nextSurse',selectie:'nextSel',quiz:'nextQuiz'};
+  var nextFn=nextFnMap[secId];
+  var dotsEl=document.getElementById(secId+'Dots');var qEl=document.getElementById(secId+'Q');
+  var dotsHtml='';for(var i=0;i<n;i++){var cl='pdot';if(i<idx)cl+=(ST.answers[secId][i]===true?' c':' w');else if(i===idx)cl+=' cur';dotsHtml+='<div class="'+cl+'"></div>';}
+  dotsEl.innerHTML=dotsHtml;
+  if(idx>=n){showSectionScore(secId);qEl.innerHTML='';return;}
+  var q=pool[selArr[idx]];var L=['A','B','C','D'];
+  var optIdx=[0,1,2,3].slice(0,q.o.length);var shuffleRng=mkRng(ST.seed+selArr[idx]*100+idx);
+  for(var si=optIdx.length-1;si>0;si--){var sj=Math.floor(shuffleRng()*(si+1));var st=optIdx[si];optIdx[si]=optIdx[sj];optIdx[sj]=st;}
+  if(!ST.shuffled[secId])ST.shuffled[secId]={};ST.shuffled[secId][idx]=optIdx;
+  var optsHtml='';for(var j=0;j<optIdx.length;j++)optsHtml+='<button class="sopt" onclick="answerQ(\''+secId+'\','+idx+','+j+')"><span class="sopt-letter">'+L[j]+'</span>'+q.o[optIdx[j]]+'</button>';
+  var ctx=q.ctx?('<div class="scen-ctx">'+q.ctx+'</div>'):'';var isLast=idx===n-1;
+  qEl.innerHTML='<div class="scen-card"><div class="scen-tag">'+(q.tip||'Scenariu')+'</div><div class="scen-q">'+q.q+'</div>'+ctx+'<div class="scen-opts" id="opts-'+secId+'">'+optsHtml+'</div><div class="scen-fb" id="fb-'+secId+'"></div><div id="nxt-'+secId+'" style="display:none;text-align:right;margin-top:16px">'+(!isLast?'<button class="btnpri" onclick="'+nextFn+'('+(idx+1)+')">Urmatorul &rarr;</button>':'<button class="btnpri" onclick="showSectionScore(\''+secId+'\')">Vezi scorul &rarr;</button>')+'</div></div>';
+}
+
+function answerQ(secId,idx,chosen){
+  var pool=getPool(secId);var selArr=ST.sel[secId];var q=pool[selArr[idx]];
+  var optIdx=(ST.shuffled[secId]&&ST.shuffled[secId][idx])||[0,1,2,3];
+  var chosenOrig=optIdx[chosen];var ok=(chosenOrig===q.c);
+  ST.answers[secId][idx]=ok;if(ok)ST.scores[secId]++;ST.progress[secId]=idx+1;
+  var correctDisplay=optIdx.indexOf(q.c);
+  var btns=document.querySelectorAll('#opts-'+secId+' .sopt');
+  for(var i=0;i<btns.length;i++){btns[i].disabled=true;btns[i].style.cursor='default';if(i===correctDisplay)btns[i].classList.add('correct');else if(i===chosen&&!ok)btns[i].classList.add('wrong');}
+  var fb=document.getElementById('fb-'+secId);fb.className='scen-fb show '+(ok?'fb-correct':'fb-wrong');fb.innerHTML='<strong>'+(ok?'&#10003; Corect!':'&#10007; Incorect.')+'</strong> '+q.e;
+  document.getElementById('nxt-'+secId).style.display='block';
+  var dots=document.getElementById(secId+'Dots').querySelectorAll('.pdot');if(dots[idx])dots[idx].className='pdot '+(ok?'c':'w');
+  updateNavScore(secId);localStorage.setItem('mru3_st',JSON.stringify(ST));
+}
+
+function nextRec(i){renderSection('recrutare',i);}
+function nextSurse(i){renderSection('surse',i);}
+function nextSel(i){renderSection('selectie',i);}
+function nextQuiz(i){renderSection('quiz',i);}
+
+function updateNavScore(secId){var el=document.getElementById('nav-'+secId);if(!el)return;var existing=el.querySelector('.nscore');var maxMap={recrutare:6,surse:6,selectie:4,quiz:8};var pr=ST.progress[secId];if(pr>0){if(!existing){var sp=document.createElement('span');sp.className='nscore';el.appendChild(sp);existing=sp;}existing.textContent=ST.scores[secId]+'/'+pr;}}
+
+function showSectionScore(secId){
+  var maxMap={recrutare:6,surse:6,selectie:4,quiz:8};var mx=maxMap[secId]||8;var sc=ST.scores[secId];
+  var el=document.getElementById(secId+'Score');if(!el)return;el.style.display='flex';
+  document.getElementById(secId+'Snum').textContent=sc;
+  var pct=sc/mx;var labels=['Reia sectiunea si revizuieste teoria.','Partial corect. Reia conceptele cheie.','Bine! Intelegi conceptele principale.','Foarte bine!','Excelent!'];
+  var tl=['Sub 50%','50-60%','60-75%','75-90%','90-100%'];var i=pct<0.5?0:pct<0.625?1:pct<0.75?2:pct<0.9?3:4;
+  document.getElementById(secId+'Slab').textContent=sc+' / '+mx+' corecte ('+tl[i]+')';document.getElementById(secId+'Stxt').textContent=labels[i];
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function show(id){var ss=document.querySelectorAll('.section');for(var i=0;i<ss.length;i++)ss[i].classList.remove('visible');var ns=document.querySelectorAll('.ni');for(var i=0;i<ns.length;i++)ns[i].classList.remove('active');document.getElementById('section-'+id).classList.add('visible');document.getElementById('nav-'+id).classList.add('active');if(id==='predare')buildPredare();}
+function done(id){ST.done[id]=true;document.getElementById('nav-'+id).classList.add('done');updProg();localStorage.setItem('mru3_st',JSON.stringify(ST));}
+function updProg(){var c=0;var k=Object.keys(ST.done);for(var i=0;i<k.length;i++)if(ST.done[k[i]])c++;document.getElementById('progTxt').textContent=c+' / 4';document.getElementById('pbfill').style.width=(c/4*100)+'%';}
+
+function buildPredare(){
+  var items=[{id:'recrutare',label:'Recrutarea RU',mx:6},{id:'surse',label:'Surse si metode',mx:6},{id:'selectie',label:'Selectia RU',mx:4},{id:'quiz',label:'Autoevaluare',mx:8}];
+  var sumHtml='';
+  for(var i=0;i<items.length;i++){var sc=ST.scores[items[i].id];var mx=items[i].mx;var pct=mx>0?sc/mx:0;var col=pct>=0.75?'var(--green)':pct>=0.5?'var(--gold)':'var(--red)';sumHtml+='<div class="ss-card"><div class="ss-num" style="color:'+col+'">'+sc+'/'+mx+'</div><div class="ss-label">'+items[i].label+'</div></div>';}
+  var total=ST.scores.recrutare+ST.scores.surse+ST.scores.selectie+ST.scores.quiz;
+  sumHtml+='<div class="ss-card" style="grid-column:1/-1"><div class="ss-num">'+total+'/24</div><div class="ss-label">Total</div></div>';
+  document.getElementById('scoreSummary').innerHTML=sumHtml;
+  var cl='';for(var i=0;i<items.length;i++){var ok=ST.done[items[i].id];cl+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:'+(ok?'var(--greenbg)':'var(--surface2)')+';border-radius:var(--r);border-left:3px solid '+(ok?'var(--green)':'var(--border)')+';margin-bottom:8px"><span>'+(ok?'&#10003;':'&#9675;')+'</span><span style="font-size:13.5px;color:'+(ok?'var(--green)':'var(--muted)')+'">'+items[i].label+'</span></div>';}
+  document.getElementById('checklist').innerHTML=cl;
+}
+
+async function predaLucrarea(){
+  var btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='Se trimite...';
+  var total=ST.scores.recrutare+ST.scores.surse+ST.scores.selectie+ST.scores.quiz;
+  var data={modul:3,nume:ST.student.n,grupa:ST.student.g,timestamp:new Date().toISOString(),seed:ST.seed,scor_recrutare:ST.scores.recrutare,scor_surse:ST.scores.surse,scor_selectie:ST.scores.selectie,scor_quiz:ST.scores.quiz,scor_total:total,prog_recrutare:ST.done.recrutare,prog_surse:ST.done.surse,prog_selectie:ST.done.selectie,prog_quiz:ST.done.quiz,raspunsuri_recrutare:JSON.stringify(ST.answers.recrutare),raspunsuri_surse:JSON.stringify(ST.answers.surse),raspunsuri_selectie:JSON.stringify(ST.answers.selectie),raspunsuri_quiz:JSON.stringify(ST.answers.quiz),nota:null,obs:''};
+  if(ST.modAcces)data.mod_acces=ST.modAcces;
+  try{
+    var r=await fetch('https://script.google.com/macros/s/AKfycbwXcTXZi61Hp2hCMQcNsJLipi6LNJLufOkAof0uBLjVoOCAJewesrs4XD_uVa-jfGRy/exec',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+    if(!r.ok)throw new Error(await r.text());
+    var z=document.getElementById('subZone');z.className='subzone done';
+    var reiaBtn=ST.modAcces==='train'?'<button class="subbtn" style="margin-top:14px;background:var(--navy)" onclick="reiaModul()">&#8635; Reia seminarul</button>':'';
+    z.innerHTML='<div style="font-size:36px;margin-bottom:12px">&#10003;</div><h3 style="color:var(--green)">Raspunsuri trimise!</h3><p>Scorul tau total: <strong>'+total+'/24</strong>. Profesorul va consulta rezultatele.</p>'+reiaBtn;
+  }catch(err){btn.disabled=false;btn.textContent='📤 Trimite raspunsurile';alert('Eroare la trimitere.\n'+err.message);}
+}
+
+function checkCod(){
+  var cod=document.getElementById('inputCod').value.trim();
+  var errEl=document.getElementById('idErrCod');
+  if(cod===COD_TRAIN){
+    ST.modAcces='train';
+    document.getElementById('idStep2Title').textContent='Seminar — Modul 3';
+    document.getElementById('idStep2Desc').textContent='Poti accesa de maxim '+MAX_TRAIN+' ori. Vei primi scenarii diferite la fiecare incercare.';
+    document.getElementById('idStep1').style.display='none';
+    document.getElementById('idStep2').style.display='block';
+  }else if(cod===COD_EXAM){
+    ST.modAcces='exam';
+    document.getElementById('idStep2Title').textContent='Examen — Modul 3';
+    document.getElementById('idStep2Desc').textContent='Ai la dispozitie maxim '+MAX_EXAM+' sustineri. Completeaza cu atentie.';
+    document.getElementById('idStep1').style.display='none';
+    document.getElementById('idStep2').style.display='block';
+  }else{errEl.style.display='block';}
+}
+
+async function checkLimit(n,g,mod){
+  var max=mod==='train'?MAX_TRAIN:MAX_EXAM;
+  try{
+    return {count:0,max:max,ok:true};
+  }catch(e){return {count:0,max:max,ok:true};}
+}
+
+function reiaModul(){
+  ['mru3_id','mru3_seed','mru3_sel','mru3_st','mru3_mod'].forEach(function(k){localStorage.removeItem(k);});
+  location.reload();
+}
+
+function submitIdentity(){
+  var n=document.getElementById('inputNume').value.trim();
+  var g=document.getElementById('inputGrupa').value.trim();
+  if(!n||!g){document.getElementById('idErr').style.display='block';return;}
+  var btn=document.querySelector('#idStep2 .id-btn');
+  btn.disabled=true;btn.textContent='Se verifica...';
+  checkLimit(n,g,ST.modAcces).then(function(res){
+    btn.disabled=false;btn.textContent='Genereaza setul meu →';
+    if(!res.ok){
+      var errEl=document.getElementById('idErr');
+      errEl.style.display='block';
+      errEl.textContent='Ai atins limita de '+(ST.modAcces==='train'?'seminare':'sustineri')+' ('+res.max+'/'+res.max+'). Contacteaza profesorul.';
+      return;
+    }
+    ST.student={n:n,g:g};
+    var seed=mkSeed(n,g);ST.seed=seed;
+    buildSelections(seed);
+    localStorage.setItem('mru3_id',JSON.stringify({n:n,g:g}));
+    localStorage.setItem('mru3_seed',String(seed));
+    localStorage.setItem('mru3_sel',JSON.stringify(ST.sel));
+    localStorage.setItem('mru3_st',JSON.stringify(ST));
+    localStorage.setItem('mru3_mod',ST.modAcces);
+    var tip=ST.modAcces==='train'?'Antr.'+(res.count+1)+'/'+res.max:'Exam.'+(res.count+1)+'/'+res.max;
+    document.getElementById('hUser').textContent=n+' · '+g+' ('+tip+')';
+    document.getElementById('identifyScreen').classList.remove('show');
+    renderSection('recrutare',0);renderSection('surse',0);renderSection('selectie',0);renderSection('quiz',0);
+  }).catch(function(e){
+    btn.disabled=false;btn.textContent='Genereaza setul meu →';
+    alert('Eroare: '+e.message);
+  });
+}
+
+(function(){
+  var saved=localStorage.getItem('mru3_id');var savedSel=localStorage.getItem('mru3_sel');var savedSt=localStorage.getItem('mru3_st');var savedSeed=localStorage.getItem('mru3_seed');
+  if(saved&&savedSel&&savedSeed){
+    var id=JSON.parse(saved);ST.student=id;ST.seed=parseInt(savedSeed);var sel=JSON.parse(savedSel);ST.sel=sel;
+    if(savedSt){var st=JSON.parse(savedSt);ST.scores=st.scores||ST.scores;ST.answers=st.answers||ST.answers;ST.done=st.done||ST.done;ST.progress=st.progress||ST.progress;ST.shuffled=st.shuffled||{};}
+    ST.modAcces=localStorage.getItem('mru3_mod')||'exam';
+    document.getElementById('hUser').textContent=id.n+' · '+id.g;
+    var dkeys=Object.keys(ST.done);for(var i=0;i<dkeys.length;i++)if(ST.done[dkeys[i]])document.getElementById('nav-'+dkeys[i])?.classList.add('done');
+    updProg();
+    var sections=['recrutare','surse','selectie','quiz'];
+    for(var s=0;s<sections.length;s++){var sec=sections[s];var prog=ST.progress[sec]||0;if(prog>=ST.sel[sec].length){renderSection(sec,ST.sel[sec].length);showSectionScore(sec);}else{renderSection(sec,prog);}updateNavScore(sec);}
+    document.getElementById('loadingScreen').style.display='none';
+  }else{document.getElementById('loadingScreen').style.display='none';document.getElementById('identifyScreen').classList.add('show');}
+})();
+</script>
+</body>
+</html>
