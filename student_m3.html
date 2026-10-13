@@ -585,12 +585,7 @@ function checkCod(){
   }else{errEl.style.display='block';}
 }
 
-async function checkLimit(n,g,mod){
-  var max=mod==='train'?MAX_TRAIN:MAX_EXAM;
-  try{
-    return {count:0,max:max,ok:true};
-  }catch(e){return {count:0,max:max,ok:true};}
-}
+function checkLimit(n,g,mod){var max=mod==='train'?MAX_TRAIN:MAX_EXAM;return Promise.resolve({count:0,max:max,ok:true});}
 
 function reiaModul(){
   ['mru3_id','mru3_seed','mru3_sel','mru3_st','mru3_mod'].forEach(function(k){localStorage.removeItem(k);});
@@ -605,12 +600,7 @@ function submitIdentity(){
   btn.disabled=true;btn.textContent='Se verifica...';
   checkLimit(n,g,ST.modAcces).then(function(res){
     btn.disabled=false;btn.textContent='Genereaza setul meu →';
-    if(!res.ok){
-      var errEl=document.getElementById('idErr');
-      errEl.style.display='block';
-      errEl.textContent='Ai atins limita de '+(ST.modAcces==='train'?'seminare':'sustineri')+' ('+res.max+'/'+res.max+'). Contacteaza profesorul.';
-      return;
-    }
+    // No limit enforced - professor checks Google Sheets
     ST.student={n:n,g:g};
     var seed=mkSeed(n,g);ST.seed=seed;
     buildSelections(seed);
@@ -619,7 +609,7 @@ function submitIdentity(){
     localStorage.setItem('mru3_sel',JSON.stringify(ST.sel));
     localStorage.setItem('mru3_st',JSON.stringify(ST));
     localStorage.setItem('mru3_mod',ST.modAcces);
-    var tip=ST.modAcces==='train'?'Antr.'+(res.count+1)+'/'+res.max:'Exam.'+(res.count+1)+'/'+res.max;
+    var tip=ST.modAcces==='train'?'Seminar':'Examen';
     document.getElementById('hUser').textContent=n+' · '+g+' ('+tip+')';
     document.getElementById('identifyScreen').classList.remove('show');
     renderSection('recrutare',0);renderSection('surse',0);renderSection('selectie',0);renderSection('quiz',0);
