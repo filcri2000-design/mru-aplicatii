@@ -555,15 +555,39 @@ function buildPredare(){
 
 async function predaLucrarea(){
   var btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='Se trimite...';
-  var total=ST.scores.recrutare+ST.scores.surse+ST.scores.selectie+ST.scores.quiz;
-  var data={modul:3,nume:ST.student.n,grupa:ST.student.g,timestamp:new Date().toISOString(),seed:ST.seed,scor_recrutare:ST.scores.recrutare,scor_surse:ST.scores.surse,scor_selectie:ST.scores.selectie,scor_quiz:ST.scores.quiz,scor_total:total,prog_recrutare:ST.done.recrutare,prog_surse:ST.done.surse,prog_selectie:ST.done.selectie,prog_quiz:ST.done.quiz,raspunsuri_recrutare:JSON.stringify(ST.answers.recrutare),raspunsuri_surse:JSON.stringify(ST.answers.surse),raspunsuri_selectie:JSON.stringify(ST.answers.selectie),raspunsuri_quiz:JSON.stringify(ST.answers.quiz),nota:null,obs:''};
-  if(ST.modAcces)data.mod_acces=ST.modAcces;
+  var total=0;
+  var data={};
+  data.nume=ST.student.n;data.grupa=ST.student.g;
+  data.timestamp=new Date().toISOString();
+  data.modul=3;
+  data.scor_recrutare=ST.scores.recrutare||0;
+  data.scor_surse=ST.scores.surse||0;
+  data.scor_selectie=ST.scores.selectie||0;
+  data.scor_quiz=ST.scores.quiz||0;
+  data.scor_total=data.scor_recrutare+data.scor_surse+data.scor_selectie+data.scor_quiz;
+  var payload={fields:{      'Nume': data.nume||'',
+      'Grupa': data.grupa||'',
+      'Modul': 'Modul 3',
+      'Tip': ST.modAcces==='train'?'Seminar':'Examen',
+      'Timestamp': new Date().toISOString(),
+      'scor_recrutare': data.scor_recrutare||0,
+      'scor_surse': data.scor_surse||0,
+      'scor_selectie': data.scor_selectie||0,
+      'scor_quiz': data.scor_quiz||0,
+      'scor_total': data.scor_total||0,
+      'Nota': '',
+      'Observatii': ''
+  }};
   try{
-    var r=await fetch('https://script.google.com/macros/s/AKfycbwXcTXZi61Hp2hCMQcNsJLipi6LNJLufOkAof0uBLjVoOCAJewesrs4XD_uVa-jfGRy/exec',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+    var r=await fetch('https://api.airtable.com/v0/appvaYBzsg4kHqWHw/Table%201',{
+      method:'POST',
+      headers:{'Authorization':'Bearer pattjCJ1wnntjPT5Q.30120b8d4879035e4f6043edbaf06149023ec31de41d77e80e57f0d4643775d1','Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
     if(!r.ok)throw new Error(await r.text());
     var z=document.getElementById('subZone');z.className='subzone done';
     var reiaBtn=ST.modAcces==='train'?'<button class="subbtn" style="margin-top:14px;background:var(--navy)" onclick="reiaModul()">&#8635; Reia seminarul</button>':'';
-    z.innerHTML='<div style="font-size:36px;margin-bottom:12px">&#10003;</div><h3 style="color:var(--green)">Raspunsuri trimise!</h3><p>Scorul tau total: <strong>'+total+'/24</strong>. Profesorul va consulta rezultatele.</p>'+reiaBtn;
+    z.innerHTML='<div style="font-size:36px;margin-bottom:12px">&#10003;</div><h3 style="color:var(--green)">Raspunsuri trimise!</h3><p>Scorul tau total: <strong>'+data.scor_total+'/24</strong>. Profesorul va consulta rezultatele.</p>'+reiaBtn;
   }catch(err){btn.disabled=false;btn.textContent='📤 Trimite raspunsurile';alert('Eroare la trimitere.\n'+err.message);}
 }
 
